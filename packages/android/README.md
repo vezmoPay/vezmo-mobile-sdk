@@ -230,7 +230,7 @@ Create the session with your sandbox API key. Pay with the test card `4242 4242 
 CVC; 3D Secure shows a test page where you can approve or fail the payment. `4000 0000 0000 3220` always asks for 3D
 Secure. `4000 0000 0000 0002` is declined.
 
-The [example app](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/tree/main/packages/android/example)
+The [example app](https://github.com/vezmoPay/vezmo-mobile-sdk/tree/main/packages/android/example)
 pays against Vezmo's sandbox with no setup.
 
 ## Troubleshooting
@@ -256,7 +256,7 @@ cancel, a bad token, Cash App and Instant ACH on the merchant-of-record business
 of the UPI, Pix, Instant ACH, subscription and result states (`checkout/src/androidTest`).
 
 To release, set `VERSION_NAME` in `gradle.properties` and push a tag `android-v<version>` (first of the four SDKs;
-see [RELEASING.md](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/blob/main/RELEASING.md)).
+see [RELEASING.md](https://github.com/vezmoPay/vezmo-mobile-sdk/blob/main/RELEASING.md)).
 `release-android.yml` signs and uploads to Maven Central (needs the `MAVEN_CENTRAL_USERNAME`,
 `MAVEN_CENTRAL_PASSWORD`, `SIGNING_KEY` and `SIGNING_KEY_PASSWORD` secrets); release the validated upload in the
 Central Portal.

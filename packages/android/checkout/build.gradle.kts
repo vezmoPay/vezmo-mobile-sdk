@@ -85,7 +85,7 @@ mavenPublishing {
         name.set("Vezmo Checkout")
         description.set("The Vezmo payment sheet for Android apps: cards with 3D Secure, Google Pay, pay-later methods, UPI and Pix, in the buyer's own currency.")
         inceptionYear.set("2026")
-        url.set("https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk")
+        url.set("https://github.com/vezmoPay/vezmo-mobile-sdk")
         licenses {
             license {
                 name.set("MIT License")
@@ -101,9 +101,9 @@ mavenPublishing {
             }
         }
         scm {
-            url.set("https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk")
-            connection.set("scm:git:https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk.git")
-            developerConnection.set("scm:git:ssh://git@github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk.git")
+            url.set("https://github.com/vezmoPay/vezmo-mobile-sdk")
+            connection.set("scm:git:https://github.com/vezmoPay/vezmo-mobile-sdk.git")
+            developerConnection.set("scm:git:ssh://git@github.com/vezmoPay/vezmo-mobile-sdk.git")
         }
     }
 }

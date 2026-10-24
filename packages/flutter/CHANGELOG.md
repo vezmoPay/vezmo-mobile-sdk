@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **New repository address**: the source moved to `github.com/vezmoPay/vezmo-mobile-sdk` (the old
+  `ACCEPT-GLOBAL-LIMITED` address redirects). Package metadata and links point to it.
 - **Instant ACH**: buyers pay from a US bank account. When the business offers it, the sheet has an Instant ACH row
   (US dollars only, never in the buyer's own currency) that opens a secure bank-connection step; the payment confirms
   at once and the receipt reads "Paid with Instant ACH". Subscriptions save the bank account for the renewals; a free
