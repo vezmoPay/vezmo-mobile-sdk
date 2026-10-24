@@ -276,7 +276,7 @@ Create the session with your sandbox API key. Pay with the test card `4242 4242 
 CVC; 3D Secure shows a test page where you can approve or fail the payment. `4000 0000 0000 3220` always asks for 3D
 Secure. `4000 0000 0000 0002` is declined.
 
-The [example app](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/tree/main/packages/flutter/example) pays
+The [example app](https://github.com/vezmoPay/vezmo-mobile-sdk/tree/main/packages/flutter/example) pays
 against Vezmo's sandbox with no setup: `cd example && flutter run`. In the sandbox, Apple Pay and Google Pay use the
 cards in the phone's wallet without charging them.
 
@@ -350,7 +350,7 @@ and the sheet in dark mode.
 
 To release, push a tag `flutter-v<version>` after the Android and iOS SDKs it pins are out; the release order and
 every place the version lives are in
-[RELEASING.md](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/blob/main/RELEASING.md). `release-flutter.yml` publishes
+[RELEASING.md](https://github.com/vezmoPay/vezmo-mobile-sdk/blob/main/RELEASING.md). `release-flutter.yml` publishes
 to pub.dev from GitHub Actions, with no stored secret.
 
 ## License

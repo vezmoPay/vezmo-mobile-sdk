@@ -1,14 +1,14 @@
 # Vezmo Mobile SDK
 
-[![React Native](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/actions/workflows/react-native.yml/badge.svg?branch=main)](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/actions/workflows/react-native.yml)
-[![React Native e2e](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/actions/workflows/react-native-e2e.yml/badge.svg?branch=main)](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/actions/workflows/react-native-e2e.yml)
-[![iOS](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/actions/workflows/ios.yml/badge.svg?branch=main)](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/actions/workflows/ios.yml)
-[![Android](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/actions/workflows/android.yml)
-[![Flutter](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/actions/workflows/flutter.yml/badge.svg?branch=main)](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/actions/workflows/flutter.yml)
+[![React Native](https://github.com/vezmoPay/vezmo-mobile-sdk/actions/workflows/react-native.yml/badge.svg?branch=main)](https://github.com/vezmoPay/vezmo-mobile-sdk/actions/workflows/react-native.yml)
+[![React Native e2e](https://github.com/vezmoPay/vezmo-mobile-sdk/actions/workflows/react-native-e2e.yml/badge.svg?branch=main)](https://github.com/vezmoPay/vezmo-mobile-sdk/actions/workflows/react-native-e2e.yml)
+[![iOS](https://github.com/vezmoPay/vezmo-mobile-sdk/actions/workflows/ios.yml/badge.svg?branch=main)](https://github.com/vezmoPay/vezmo-mobile-sdk/actions/workflows/ios.yml)
+[![Android](https://github.com/vezmoPay/vezmo-mobile-sdk/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/vezmoPay/vezmo-mobile-sdk/actions/workflows/android.yml)
+[![Flutter](https://github.com/vezmoPay/vezmo-mobile-sdk/actions/workflows/flutter.yml/badge.svg?branch=main)](https://github.com/vezmoPay/vezmo-mobile-sdk/actions/workflows/flutter.yml)
 [![npm](https://img.shields.io/npm/v/@vezmopay/react-native?label=npm)](https://www.npmjs.com/package/@vezmopay/react-native)
 [![pub.dev](https://img.shields.io/pub/v/vezmo_checkout?label=pub.dev)](https://pub.dev/packages/vezmo_checkout)
 [![Maven Central](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fcom%2Fvezmo%2Fvezmo-checkout%2Fmaven-metadata.xml&label=maven%20central)](https://central.sonatype.com/artifact/com.vezmo/vezmo-checkout)
-[![Swift Package Manager](https://img.shields.io/github/v/tag/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk?filter=%21*-v*&sort=semver&label=swiftpm)](packages/ios#readme)
+[![Swift Package Manager](https://img.shields.io/github/v/tag/vezmoPay/vezmo-mobile-sdk?filter=%21*-v*&sort=semver&label=swiftpm)](packages/ios#readme)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Take payments in your iPhone and Android apps with Vezmo, in a native payment sheet: cards with 3D Secure, Apple Pay,
@@ -121,7 +121,7 @@ Each package has an example app (a small shop called Northwind Audio) that pays 
 | --- | --- |
 | [React Native](packages/react-native/example) | `yarn example expo run:ios` or `yarn example expo run:android` from `packages/react-native` |
 | [iOS](packages/ios/Example) | `xcodegen generate` in `packages/ios/Example`, then open `VezmoExample.xcodeproj` |
-| [Android](packages/android/example) | `gradle :example:installRelease` from `packages/android`, or install `example-apk` from the latest [Android SDK run](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/actions/workflows/android.yml?query=branch%3Amain) |
+| [Android](packages/android/example) | `gradle :example:installRelease` from `packages/android`, or install `example-apk` from the latest [Android SDK run](https://github.com/vezmoPay/vezmo-mobile-sdk/actions/workflows/android.yml?query=branch%3Amain) |
 | [Flutter](packages/flutter/example) | `flutter run` from `packages/flutter/example` |
 
 ## Repository layout
@@ -151,7 +151,7 @@ Maintainers release in the order in [RELEASING.md](RELEASING.md).
 ## Help and security
 
 - **Questions about your Vezmo account, payments or payouts**: [support@vezmo.com](mailto:support@vezmo.com).
-- **A bug in an SDK**: [open an issue](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/issues/new/choose)
+- **A bug in an SDK**: [open an issue](https://github.com/vezmoPay/vezmo-mobile-sdk/issues/new/choose)
   with the SDK, its version and the phone.
 - **A security problem**: report it privately, never in a public issue; see [SECURITY.md](SECURITY.md).
 - **Contributing**: see [CONTRIBUTING.md](CONTRIBUTING.md).

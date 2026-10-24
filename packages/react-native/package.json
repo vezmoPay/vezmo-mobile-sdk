@@ -52,15 +52,15 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk.git",
+    "url": "git+https://github.com/vezmoPay/vezmo-mobile-sdk.git",
     "directory": "packages/react-native"
   },
   "author": "Vezmo (https://vezmo.com)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/issues"
+    "url": "https://github.com/vezmoPay/vezmo-mobile-sdk/issues"
   },
-  "homepage": "https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk#readme",
+  "homepage": "https://github.com/vezmoPay/vezmo-mobile-sdk#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },

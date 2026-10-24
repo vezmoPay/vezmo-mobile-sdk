@@ -2,6 +2,11 @@
 
 For maintainers. Release the four SDKs in this order (each tag runs its own workflow):
 
+> **Repository moved (24 Oct 2026):** this repo now lives at `github.com/vezmoPay/vezmo-mobile-sdk` (it was
+> `ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk`; GitHub redirects the old address). npm trusted publishing and pub.dev
+> automated publishing name the repository, so both must say `vezmoPay/vezmo-mobile-sdk` before the next React Native
+> or Flutter release (npm: package settings → Trusted publisher; pub.dev: package Admin → Automated publishing).
+
 1. **Android**: push `android-v<version>`. `release-android.yml` signs and uploads to Maven Central (needs
    `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `SIGNING_KEY` and `SIGNING_KEY_PASSWORD`: a Central Portal
    account with the `com.vezmo` namespace verified); then release the validated upload in the Central Portal.

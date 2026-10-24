@@ -5,7 +5,7 @@
 
 import PackageDescription
 
-let repository = "https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk"
+let repository = "https://github.com/vezmoPay/vezmo-mobile-sdk"
 let sdk: Package.Dependency = Context.environment["VEZMO_IOS_SDK_REVISION"].map { .package(url: repository, revision: $0) }
     ?? .package(url: repository, from: "0.1.0")
 

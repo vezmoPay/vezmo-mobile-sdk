@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   s.authors      = package["author"]
 
   s.platforms    = { :ios => "15.1" }
-  s.source       = { :git => "https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk.git", :tag => "react-native-v#{s.version}" }
+  s.source       = { :git => "https://github.com/vezmoPay/vezmo-mobile-sdk.git", :tag => "react-native-v#{s.version}" }
   s.swift_version = "5.9"
 
   s.source_files = "ios/**/*.{h,m,mm,swift}"

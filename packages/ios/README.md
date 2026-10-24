@@ -18,14 +18,14 @@ Your server keeps your Vezmo API key. The app only ever receives a session's cli
 Swift Package Manager. In Xcode, **File → Add Package Dependencies…** and enter:
 
 ```
-https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk
+https://github.com/vezmoPay/vezmo-mobile-sdk
 ```
 
 Choose the `VezmoCheckout` library. Or in your `Package.swift`:
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk", .upToNextMinor(from: "0.1.0")),
+  .package(url: "https://github.com/vezmoPay/vezmo-mobile-sdk", .upToNextMinor(from: "0.1.0")),
 ],
 targets: [
   .target(name: "MyApp", dependencies: [.product(name: "VezmoCheckout", package: "vezmo-mobile-sdk")]),
@@ -276,7 +276,7 @@ CVC; 3D Secure shows a test page where you can approve or fail the payment. `400
 Secure. `4000 0000 0000 0002` is declined. In the sandbox, Apple Pay uses the cards in the phone's wallet without
 charging them.
 
-The [example app](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/tree/main/packages/ios/Example) pays
+The [example app](https://github.com/vezmoPay/vezmo-mobile-sdk/tree/main/packages/ios/Example) pays
 against Vezmo's sandbox: run `xcodegen generate` in `packages/ios/Example`, open `VezmoExample.xcodeproj`, and set the
 `VEZMO_DEMO_URL` and `VEZMO_API_BASE` build settings to the sandbox (or paste a client token in the app).
 

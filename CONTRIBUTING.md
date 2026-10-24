@@ -2,7 +2,7 @@
 
 Thanks for helping with the Vezmo mobile SDKs. Bug reports and pull requests are welcome.
 
-- **A bug**: [open an issue](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/issues/new/choose) with the
+- **A bug**: [open an issue](https://github.com/vezmoPay/vezmo-mobile-sdk/issues/new/choose) with the
   SDK and its version, the phone and OS version, what you did and what happened. A session's client token is safe to
   share; an API key or secret never is.
 - **A security problem**: never in an issue or pull request. Report it privately as [SECURITY.md](SECURITY.md) says.

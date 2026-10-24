@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Setup guides
-    url: https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk#choose-your-sdk
+    url: https://github.com/vezmoPay/vezmo-mobile-sdk#choose-your-sdk
     about: The guide for each SDK (React Native, iOS, Android, Flutter), with troubleshooting.
   - name: Report a security vulnerability
-    url: https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/security/advisories/new
+    url: https://github.com/vezmoPay/vezmo-mobile-sdk/security/advisories/new
     about: Please report security problems privately, never in a public issue.
