@@ -14,7 +14,11 @@ For maintainers. Release the four SDKs in this order (each tag runs its own work
    reads it directly. `release-ios.yml` checks that it equals `VezmoCheckout.version`.
 3. **React Native**: push `react-native-v<version>`. `release-react-native.yml` publishes to npm with provenance, signed
    in by npm trusted publishing (no token: the package's npm settings trust this repository's
-   `release-react-native.yml`).
+   `release-react-native.yml`). **0.1.1 only**: the package was deleted from npm on 24 Oct 2026 while its trusted
+   publisher was being changed, and npm trusts a workflow only on a package that exists. So 0.1.1 (built from the
+   `release/react-native-0.1` branch, tag `react-native-v0.1.1`) was published once by hand with a short-lived token;
+   the tags take over again from the next release. To change the trusted publisher, remove only the publisher in the
+   package settings, never the package.
 4. **Flutter**, last: push `flutter-v<version>`. The plugin runs on the native SDKs, so it needs 1 and 2 out first;
    `release-flutter.yml` checks both, then publishes to pub.dev with GitHub's login (the one-time pub.dev setup is in
    that file's header). **0.1.0 only**: pub.dev automates only a package that already exists, so publish 0.1.0 by
