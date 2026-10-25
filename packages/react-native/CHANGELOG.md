@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1
+
+The same SDK as 0.1.0, published again: 0.1.0 was removed from npm by mistake on 24 Oct 2026, and npm never lets a
+removed version number be used again. Nothing changes in your app; update with `npm install @vezmopay/react-native@0.1.1`.
+
+- **New repository address**: the source moved to `github.com/vezmoPay/vezmo-mobile-sdk` (the old
+  `ACCEPT-GLOBAL-LIMITED` address redirects). Package metadata and links point to it.
+
 ## 0.1.0
 
 The first release of the Vezmo payment sheet for React Native and Expo.

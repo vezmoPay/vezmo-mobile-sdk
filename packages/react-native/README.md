@@ -247,7 +247,7 @@ CVC; 3D Secure shows a test page where you can approve or fail the payment. `400
 Secure. `4000 0000 0000 0002` is declined. In the sandbox, Apple Pay and Google Pay use the cards in the phone's wallet
 without charging them.
 
-The [example app](https://github.com/ACCEPT-GLOBAL-LIMITED/vezmo-mobile-sdk/tree/main/packages/react-native/example)
+The [example app](https://github.com/vezmoPay/vezmo-mobile-sdk/tree/main/packages/react-native/example)
 pays against Vezmo's sandbox with no setup.
 
 ### In your Jest tests
