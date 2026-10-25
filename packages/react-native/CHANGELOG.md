@@ -2,13 +2,19 @@
 
 ## Unreleased
 
-- **New repository address**: the source moved to `github.com/vezmoPay/vezmo-mobile-sdk` (the old
-  `ACCEPT-GLOBAL-LIMITED` address redirects). Package metadata and links point to it.
 - **Instant ACH**: buyers pay from a US bank account. When the business offers it, the sheet has an Instant ACH row
   (US dollars only, never in the buyer's own currency) that opens a secure bank-connection step; the payment confirms
   at once and the receipt reads "Paid with Instant ACH". Subscriptions save the bank account for the renewals; a free
   trial sets it up without charging. The bank step is drawn natively, on iPhone and Android: the package now also
   brings the payment engine's bank-connection module (pinned to the same engine release).
+
+## 0.1.1
+
+The same SDK as 0.1.0, published again: 0.1.0 was removed from npm by mistake on 24 Oct 2026, and npm never lets a
+removed version number be used again. Nothing changes in your app; update with `npm install @vezmopay/react-native@0.1.1`.
+
+- **New repository address**: the source moved to `github.com/vezmoPay/vezmo-mobile-sdk` (the old
+  `ACCEPT-GLOBAL-LIMITED` address redirects). Package metadata and links point to it.
 
 ## 0.1.0
 
