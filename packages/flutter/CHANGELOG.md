@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (unreleased)
 
+- **A payment method, not a confirmation token**: the plugin now runs on the native SDKs 0.2.0
+  (`com.vezmo:vezmo-checkout` 0.2.0 and the Swift package `VezmoCheckout` 0.2.0), which send Vezmo the payment method
+  the buyer chose (`paymentMethodId`, `pm_…`) instead of a confirmation token, for every payment, subscription and
+  free trial. Vezmo's server confirms every card payment itself, and only a payment method can be confirmed that way.
+  Nothing changes in your app. Apps on 0.1.x keep working for now: update to 0.2.0.
 - **New repository address**: the source moved to `github.com/vezmoPay/vezmo-mobile-sdk` (the old
   `ACCEPT-GLOBAL-LIMITED` address redirects). Package metadata and links point to it.
 - **Instant ACH**: buyers pay from a US bank account. When the business offers it, the sheet has an Instant ACH row
