@@ -33,7 +33,7 @@ internal class VezmoApiError(
 internal interface CheckoutApi {
     suspend fun checkout(token: String, currency: String? = null): CheckoutConfig
 
-    suspend fun pay(token: String, confirmationToken: String, localOffer: String?, returnUrl: String?): PayResponse
+    suspend fun pay(token: String, paymentMethodId: String, localOffer: String?, returnUrl: String?): PayResponse
 
     suspend fun intent(token: String, localOffer: String?): SessionIntent
 
@@ -49,8 +49,8 @@ internal interface CheckoutApi {
     /** The plan, the first charge or free trial, the keys. A used or unknown link reads as expired. */
     suspend fun subscription(token: String, currency: String? = null): CheckoutConfig
 
-    /** Subscribe: Vezmo confirms the first payment, or a free trial's card, with the confirmation token. */
-    suspend fun subscriptionPay(token: String, confirmationToken: String, localOffer: String?): PayResponse
+    /** Subscribe: Vezmo confirms the first payment, or a free trial's card, with the payment method (`pm_…`). */
+    suspend fun subscriptionPay(token: String, paymentMethodId: String, localOffer: String?): PayResponse
 
     /** Records a subscription start finished on the device (after 3D Secure). */
     suspend fun subscriptionConfirm(token: String, intentId: String): CheckoutResult
@@ -106,14 +106,16 @@ internal class VezmoApi(
         return CheckoutConfig.from(call("POST", "/secure-payments/${enc(token)}/checkout?$q"))
     }
 
-    override suspend fun pay(token: String, confirmationToken: String, localOffer: String?, returnUrl: String?): PayResponse {
+    override suspend fun pay(token: String, paymentMethodId: String, localOffer: String?, returnUrl: String?): PayResponse {
         val body = JSONObject()
-            .put("confirmationToken", confirmationToken)
+            .put("paymentMethodId", paymentMethodId)
             .put("integration", INTEGRATION)
         if (!localOffer.isNullOrEmpty()) body.put("localOffer", localOffer)
-        // No returnUrl: the confirmation token carries the payment engine's own return link, which brings the buyer
-        // back into the open sheet after a bank app or pay-later provider. The app's link there would open the app but
-        // leave the payment waiting. (`returnUrl` stays in the signature for the other platforms' shape.)
+        // No returnUrl, as in 0.1.x: a card (3D Secure included) and Google Pay finish in the engine without one. The
+        // app's link would open the app but leave a bank app's or pay-later provider's payment waiting.
+        // TODO(0.2.0, before release): those methods need the payment engine's own return link, which a confirmation
+        // token carried and a payment method doesn't; send it once Vezmo's API accepts it for `android`.
+        // (`returnUrl` stays in the signature for the other platforms' shape.)
         return PayResponse.from(call("POST", "/secure-payments/${enc(token)}/pay", body))
     }
 
@@ -155,9 +157,9 @@ internal class VezmoApi(
         return CheckoutConfig.fromSubscription(json)
     }
 
-    override suspend fun subscriptionPay(token: String, confirmationToken: String, localOffer: String?): PayResponse {
+    override suspend fun subscriptionPay(token: String, paymentMethodId: String, localOffer: String?): PayResponse {
         val body = JSONObject()
-            .put("confirmationToken", confirmationToken)
+            .put("paymentMethodId", paymentMethodId)
             .put("integration", INTEGRATION)
         if (!localOffer.isNullOrEmpty()) body.put("localOffer", localOffer)
         return PayResponse.fromSubscription(call("POST", "/subscription-checkout/${enc(token)}/pay", body))
@@ -360,7 +362,7 @@ internal data class SubscriptionPlan(
     val trial get() = mode == "setup"
 }
 
-/** POST …/pay: what the server did with the buyer's confirmation token. */
+/** POST …/pay: what the server did with the buyer's payment method. */
 internal data class PayResponse(
     /** succeeded, processing or requires_action. */
     val state: String,

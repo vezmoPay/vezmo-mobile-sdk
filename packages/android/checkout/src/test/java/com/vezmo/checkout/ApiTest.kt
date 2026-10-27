@@ -33,10 +33,10 @@ class ApiTest {
     }
 
     @Test
-    fun `pays with the token, our integration and SDK header, and unwraps the data`() = runTest {
+    fun `pays with the payment method, our integration and SDK header, and unwraps the data`() = runTest {
         val calls = mutableListOf<Recorded>()
         val res = api(200, """{"success":true,"data":{"state":"processing","paymentId":"p","clientSecret":null}}""", calls)
-            .pay("tok/1", "ctoken_1", "o", "acme://vezmo")
+            .pay("tok/1", "pm_1", "o", "acme://vezmo")
         assertEquals("processing", res.state)
         assertEquals(null, res.clientSecret)
         val call = calls.single()
@@ -44,11 +44,23 @@ class ApiTest {
         assertEquals("POST", call.method)
         assertTrue(call.headers["Vezmo-SDK"]!!.matches(Regex("""^android/\d+\.\d+\.\d+.*""")))
         val body = JSONObject(call.body!!)
-        // No returnUrl: the confirmation token's own return link brings the buyer back into the sheet.
-        assertEquals(setOf("confirmationToken", "integration", "localOffer"), body.keys().asSequence().toSet())
-        assertEquals("ctoken_1", body.getString("confirmationToken"))
+        // A payment method, never a confirmation token; no returnUrl (as in 0.1.x, see VezmoApi.pay).
+        assertEquals(setOf("paymentMethodId", "integration", "localOffer"), body.keys().asSequence().toSet())
+        assertEquals("pm_1", body.getString("paymentMethodId"))
         assertEquals("android", body.getString("integration"))
         assertEquals("o", body.getString("localOffer"))
+    }
+
+    @Test
+    fun `subscribes with the payment method, never a confirmation token`() = runTest {
+        val calls = mutableListOf<Recorded>()
+        api(200, """{"success":true,"data":{"state":"succeeded","subscriptionRef":"SUB-1","paymentId":"p"}}""", calls)
+            .subscriptionPay("sub", "pm_1", null)
+        val call = calls.single()
+        assertEquals("https://api.test/v1/subscription-checkout/sub/pay", call.url)
+        val body = JSONObject(call.body!!)
+        assertEquals(setOf("paymentMethodId", "integration"), body.keys().asSequence().toSet())
+        assertEquals("pm_1", body.getString("paymentMethodId"))
     }
 
     @Test

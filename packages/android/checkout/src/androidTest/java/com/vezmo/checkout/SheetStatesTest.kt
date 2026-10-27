@@ -48,7 +48,7 @@ class SheetStatesTest {
     ) : CheckoutApi {
         override suspend fun checkout(token: String, currency: String?) = config()
 
-        override suspend fun pay(token: String, confirmationToken: String, localOffer: String?, returnUrl: String?): PayResponse =
+        override suspend fun pay(token: String, paymentMethodId: String, localOffer: String?, returnUrl: String?): PayResponse =
             payAnswer ?: error("not used")
 
         override suspend fun intent(token: String, localOffer: String?) = SessionIntent("pi_7", "pi_7_secret_q", null, false)
@@ -64,7 +64,7 @@ class SheetStatesTest {
         // A subscription checkout reads the same config (with its plan).
         override suspend fun subscription(token: String, currency: String?) = config()
 
-        override suspend fun subscriptionPay(token: String, confirmationToken: String, localOffer: String?): PayResponse = error("not used")
+        override suspend fun subscriptionPay(token: String, paymentMethodId: String, localOffer: String?): PayResponse = error("not used")
 
         override suspend fun subscriptionConfirm(token: String, intentId: String): CheckoutResult = error("not used")
     }
@@ -320,7 +320,7 @@ class SheetStatesTest {
         val paid = PayResponse("succeeded", "pay_1", "VT92TDOA", "pi_1_secret_b", PaidMethod("instantAch", null, "6789", null))
         open(FakeApi({ config(methods = setOf("card", "instantAch")) }, payAnswer = paid)) {
             load()
-            onConfirmationToken("ctoken_b")
+            onPaymentMethod("pm_b")
             onConfirmResult(ConfirmStatus.Completed, "")
         }
         rule.onNodeWithText("Instant ACH").assertIsDisplayed()

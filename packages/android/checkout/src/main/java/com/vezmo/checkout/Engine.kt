@@ -16,11 +16,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import com.stripe.android.PaymentConfiguration
-import com.stripe.android.paymentelement.CreateIntentWithConfirmationTokenCallback
 import com.stripe.android.paymentelement.EmbeddedPaymentElement
 import com.stripe.android.paymentelement.WalletButtonsPreview
 import com.stripe.android.paymentelement.WalletButtonsViewClickHandler
 import com.stripe.android.paymentelement.rememberEmbeddedPaymentElement
+import com.stripe.android.paymentsheet.CreateIntentCallback
 import com.stripe.android.paymentsheet.CreateIntentResult
 import com.stripe.android.paymentsheet.PaymentSheet
 import com.stripe.android.paymentsheet.PaymentSheetResult
@@ -89,9 +89,11 @@ internal fun engineIntent(charge: Charge, methods: SheetMethods, config: Checkou
  * - for Instant ACH, a third flow controller offering only the engine's bank step: its sheet goes straight to linking a
  *   US bank account, which our Instant ACH row opens.
  *
- * Payment flow: the buyer taps Pay → the engine makes a confirmation token and calls back → the session sends its id
- * to Vezmo, which prices and confirms the payment → the session answers with the intent's client secret → the engine
- * finishes any step left (3D Secure, Google Pay, a provider) and reports the result.
+ * Payment flow: the buyer taps Pay → the engine makes a payment method and calls back → the session sends its id
+ * (`pm_…`) to Vezmo, which prices and confirms the payment → the session answers with the intent's client secret → the
+ * engine finishes any step left (3D Secure, Google Pay, a provider) and reports the result. A payment method, not a
+ * confirmation token: Vezmo's server confirms every intent itself (manual confirmation), which refuses a token made on
+ * the device.
  */
 @OptIn(WalletButtonsPreview::class)
 internal class Engine(val session: CheckoutSession) {
@@ -254,8 +256,8 @@ internal class Engine(val session: CheckoutSession) {
             CreateIntentResult.Failure(cause = Exception(message), displayMessage = message)
         }
 
-    /** The engine made a confirmation token: hand it to the session and wait for Vezmo's answer. */
-    suspend fun awaitClientSecret(card: Boolean, tokenId: String): CreateIntentResult =
+    /** The engine made a payment method: hand its id to the session and wait for Vezmo's answer. */
+    suspend fun awaitClientSecret(card: Boolean, paymentMethodId: String): CreateIntentResult =
         withContext(Dispatchers.Main.immediate) {
             val deferred = CompletableDeferred<CreateIntentResult>()
             // A confirm still waiting is superseded by this one.
@@ -267,7 +269,7 @@ internal class Engine(val session: CheckoutSession) {
                 elementSecret?.complete(superseded)
                 elementSecret = deferred
             }
-            session.post { session.onConfirmationToken(tokenId) }
+            session.post { session.onPaymentMethod(paymentMethodId) }
             deferred.await()
         }
 
@@ -560,14 +562,14 @@ internal fun rememberEngine(session: CheckoutSession, kept: Engine? = null): Eng
             .Builder(
                 resultCallback = { engine.onFlowResult(it) },
                 paymentOptionResultCallback = { engine.reportCard(it.paymentOption) },
-            ).createIntentCallback(CreateIntentWithConfirmationTokenCallback { engine.awaitClientSecret(card = true, it.id) })
+            ).createIntentCallback(CreateIntentCallback { pm, _ -> engine.awaitClientSecret(card = true, pm.id.orEmpty()) })
     }
     val walletBuilder = remember(engine) {
         PaymentSheet.FlowController
             .Builder(
                 resultCallback = { engine.onFlowResult(it) },
                 paymentOptionResultCallback = { },
-            ).createIntentCallback(CreateIntentWithConfirmationTokenCallback { engine.awaitClientSecret(card = true, it.id) })
+            ).createIntentCallback(CreateIntentCallback { pm, _ -> engine.awaitClientSecret(card = true, pm.id.orEmpty()) })
     }
     // Instant ACH's bank step confirms through the card flow's Vezmo step too.
     val bankBuilder = remember(engine) {
@@ -575,11 +577,11 @@ internal fun rememberEngine(session: CheckoutSession, kept: Engine? = null): Eng
             .Builder(
                 resultCallback = { engine.onFlowResult(it) },
                 paymentOptionResultCallback = { engine.reportBank(it.paymentOption) },
-            ).createIntentCallback(CreateIntentWithConfirmationTokenCallback { engine.awaitClientSecret(card = true, it.id) })
+            ).createIntentCallback(CreateIntentCallback { pm, _ -> engine.awaitClientSecret(card = true, pm.id.orEmpty()) })
     }
     val elementBuilder = remember(engine) {
         EmbeddedPaymentElement.Builder(
-            createIntentCallback = CreateIntentWithConfirmationTokenCallback { engine.awaitClientSecret(card = false, it.id) },
+            createIntentCallback = CreateIntentCallback { pm, _ -> engine.awaitClientSecret(card = false, pm.id.orEmpty()) },
             resultCallback = { engine.onElementResult(it) },
         )
     }
