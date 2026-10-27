@@ -1,7 +1,7 @@
 import Foundation
 import os
 import PassKit
-@_spi(STP) @_spi(ConfirmationTokensPublicPreview) import StripePaymentSheet
+@_spi(STP) import StripePaymentSheet
 import SwiftUI
 import UIKit
 
@@ -65,15 +65,16 @@ struct EngineIntent: Equatable {
     )
   }
 
-  /// What is charged, for the element or the card flow: a confirmation token goes to `secret`, which answers with the
-  /// intent's client secret from Vezmo's server.
+  /// What is charged, for the element or the card flow: the payment method's id (`pm_…`) goes to `secret`, which
+  /// answers with the intent's client secret from Vezmo's server. A payment method, not a confirmation token: our server
+  /// confirms every intent itself (manual confirmation), which refuses a token made on the device.
   func configuration(types: [String], secret: @escaping (String) async throws -> String) -> PaymentSheet.IntentConfiguration {
     PaymentSheet.IntentConfiguration(
       mode: mode,
       paymentMethodTypes: types,
       onBehalfOf: nil,
-      confirmationTokenConfirmHandler: { confirmationToken in
-        try await secret(confirmationToken.stripeId)
+      confirmHandler: { paymentMethod, _ in
+        try await secret(paymentMethod.stripeId)
       }
     )
   }
@@ -451,9 +452,9 @@ final class CardFlowHost: ObservableObject, CardFlowPort {
   }
 
   private func intentConfiguration(_ intent: EngineIntent, types: [String] = ["card"]) -> PaymentSheet.IntentConfiguration {
-    intent.configuration(types: types) { [weak self] tokenId in
+    intent.configuration(types: types) { [weak self] paymentMethodId in
       guard let self else { throw EngineError(message: "") }
-      return try await self.clientSecret(forToken: tokenId)
+      return try await self.clientSecret(forPaymentMethod: paymentMethodId)
     }
   }
 
@@ -511,14 +512,14 @@ final class CardFlowHost: ObservableObject, CardFlowPort {
     return true
   }
 
-  // MARK: Confirmation token → Vezmo → client secret
+  // MARK: Payment method → Vezmo → client secret
 
-  private func clientSecret(forToken tokenId: String) async throws -> String {
+  private func clientSecret(forPaymentMethod paymentMethodId: String) async throws -> String {
     try await withCheckedThrowingContinuation { continuation in
       // A confirm still waiting is superseded by this one.
       pendingSecret?.resume(throwing: EngineError(message: ""))
       pendingSecret = continuation
-      Task { await session?.onConfirmationToken(tokenId) }
+      Task { await session?.onPaymentMethod(paymentMethodId) }
     }
   }
 }
@@ -545,8 +546,8 @@ struct WalletButtons: View {
 /// The engine's embedded element for the methods with rows of their own (pay-later, Cash App…). Cards and wallets are
 /// the card flow's; with no other method the element is left out.
 ///
-/// Payment flow: the buyer picks a method and taps Pay → `confirm()` → the element creates a confirmation token and
-/// calls our handler → the session sends it to Vezmo's API, which prices and confirms the payment → the session
+/// Payment flow: the buyer picks a method and taps Pay → `confirm()` → the element creates a payment method and calls
+/// our handler → the session sends its id to Vezmo's API, which prices and confirms the payment → the session
 /// answers with the intent's client secret (`resolveConfirmation`) → the element finishes any step left (3D Secure, a
 /// provider) and reports the result.
 @MainActor
@@ -680,9 +681,9 @@ final class MethodsHost: ObservableObject, ElementPort, EmbeddedPaymentElementDe
   }
 
   private func intentConfiguration(_ intent: EngineIntent) -> PaymentSheet.IntentConfiguration {
-    intent.configuration(types: intent.paymentMethodTypes) { [weak self] tokenId in
+    intent.configuration(types: intent.paymentMethodTypes) { [weak self] paymentMethodId in
       guard let self else { throw EngineError(message: "") }
-      return try await self.clientSecret(forToken: tokenId)
+      return try await self.clientSecret(forPaymentMethod: paymentMethodId)
     }
   }
 
@@ -718,13 +719,13 @@ final class MethodsHost: ObservableObject, ElementPort, EmbeddedPaymentElementDe
     DispatchQueue.main.async { self.height = fitted }
   }
 
-  // MARK: Confirmation token → Vezmo → client secret
+  // MARK: Payment method → Vezmo → client secret
 
-  private func clientSecret(forToken tokenId: String) async throws -> String {
+  private func clientSecret(forPaymentMethod paymentMethodId: String) async throws -> String {
     try await withCheckedThrowingContinuation { continuation in
       pendingSecret?.resume(throwing: EngineError(message: ""))
       pendingSecret = continuation
-      Task { await session?.onConfirmationToken(tokenId) }
+      Task { await session?.onPaymentMethod(paymentMethodId) }
     }
   }
 

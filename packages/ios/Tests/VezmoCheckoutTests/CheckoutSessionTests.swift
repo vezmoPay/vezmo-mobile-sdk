@@ -6,7 +6,7 @@ import XCTest
 final class FakeAPI: CheckoutAPI {
   struct PayCall: Equatable {
     var token: String
-    var confirmationToken: String
+    var paymentMethodId: String
     var localOffer: String?
     var returnURL: String?
   }
@@ -39,8 +39,8 @@ final class FakeAPI: CheckoutAPI {
     return config
   }
 
-  func pay(token: String, confirmationToken: String, localOffer: String?, returnURL: String?) async throws -> PayResponse {
-    payCalls.append(PayCall(token: token, confirmationToken: confirmationToken, localOffer: localOffer, returnURL: returnURL))
+  func pay(token: String, paymentMethodId: String, localOffer: String?, returnURL: String?) async throws -> PayResponse {
+    payCalls.append(PayCall(token: token, paymentMethodId: paymentMethodId, localOffer: localOffer, returnURL: returnURL))
     return try payAnswer()
   }
 
@@ -82,8 +82,8 @@ final class FakeAPI: CheckoutAPI {
     return view!
   }
 
-  func subscriptionPay(token: String, confirmationToken: String, localOffer: String?, returnURL: String?) async throws -> SubscriptionPayResponse {
-    subscriptionPayCalls.append(PayCall(token: token, confirmationToken: confirmationToken, localOffer: localOffer, returnURL: returnURL))
+  func subscriptionPay(token: String, paymentMethodId: String, localOffer: String?, returnURL: String?) async throws -> SubscriptionPayResponse {
+    subscriptionPayCalls.append(PayCall(token: token, paymentMethodId: paymentMethodId, localOffer: localOffer, returnURL: returnURL))
     return try subscriptionPayAnswer()
   }
 
@@ -163,10 +163,10 @@ final class CheckoutSessionTests: XCTestCase {
     session.setOption("•••• 4242")
     session.pay()
     XCTAssertEqual(element.confirms, 1)
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     // The receipt's Visa mark and last four come from the server's reading of the payment.
     XCTAssertEqual(snap.paidMethod, method)
-    XCTAssertEqual(api.payCalls, [.init(token: "tok", confirmationToken: "ctoken_1", localOffer: nil, returnURL: "acme://vezmo/return")])
+    XCTAssertEqual(api.payCalls, [.init(token: "tok", paymentMethodId: "pm_1", localOffer: nil, returnURL: "acme://vezmo/return")])
     XCTAssertEqual(element.resolutions, [["pi_1_secret_a", nil]])
     await session.onConfirmResult(.completed, message: "")
     XCTAssertEqual(snap.phase, .done(.succeeded(paymentId: "pay_1", transactionId: "VT1", subscription: nil)))
@@ -178,7 +178,7 @@ final class CheckoutSessionTests: XCTestCase {
     api.payAnswer = { PayResponse(state: "requires_action", paymentId: "pay_1", clientSecret: "pi_9_secret_b") }
     session.setOption("•••• 4242")
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     await session.onConfirmResult(.completed, message: "")
     XCTAssertEqual(api.confirmCalls, [["tok", "pi_9"]])
     XCTAssertEqual(snap.phase, .done(.succeeded(paymentId: "pay_1", transactionId: "VT1", subscription: nil)))
@@ -189,7 +189,7 @@ final class CheckoutSessionTests: XCTestCase {
     api.payAnswer = { throw VezmoAPIError(.declined, "Your bank declined this card.", httpStatus: 400) }
     session.setOption("•••• 4242")
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     XCTAssertEqual(element.resolutions, [[nil, "Your bank declined this card."]])
     await session.onConfirmResult(.failed, message: "processor text")
     XCTAssertEqual(snap.phase, .ready(error: VezmoError(code: .declined, message: "Your bank declined this card.")))
@@ -202,7 +202,7 @@ final class CheckoutSessionTests: XCTestCase {
     api.confirmError = VezmoAPIError(.declined, "Payment declined by your bank (issuer).", httpStatus: 400)
     session.setOption("Klarna")
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     // The engine's own words differ by platform ("Your card was declined." here, another on Android).
     await session.onConfirmResult(.failed, message: "Your card was declined.")
     XCTAssertEqual(api.confirmCalls, [["tok", "pi_9"]])
@@ -215,7 +215,7 @@ final class CheckoutSessionTests: XCTestCase {
     api.confirmError = VezmoAPIError(.network, "Check your connection and try again.")
     session.setOption("Klarna")
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     await session.onConfirmResult(.failed, message: "engine text")
     XCTAssertEqual(snap.phase, .ready(error: VezmoError(code: .declined, message: "engine text")))
   }
@@ -237,7 +237,7 @@ final class CheckoutSessionTests: XCTestCase {
     api.payAnswer = { PayResponse(state: "requires_action", paymentId: "pay_1", clientSecret: "pi_9_secret_b") }
     session.setOption("Cash App Pay")
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     await session.onConfirmResult(.failed, message: "engine text")
     XCTAssertEqual(snap.phase, .done(.succeeded(paymentId: "pay_1", transactionId: "VT1", subscription: nil)))
 
@@ -247,7 +247,7 @@ final class CheckoutSessionTests: XCTestCase {
     api.statusAnswer = SessionStatus(state: "open", paymentId: "pay_1", transactionId: nil)
     session.setOption("Cash App Pay")
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     await session.onConfirmResult(.failed, message: "")
     XCTAssertEqual(snap.phase, .ready(error: declinedError))
     XCTAssertTrue(api.confirmCalls.isEmpty)
@@ -258,7 +258,7 @@ final class CheckoutSessionTests: XCTestCase {
     api.payAnswer = { throw VezmoAPIError(.unknown, "Price changed", httpStatus: 409, reason: "local_price_changed") }
     session.setOption("•••• 4242")
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     XCTAssertEqual(element.resolutions.count, 1)
     XCTAssertTrue((element.resolutions[0][1] ?? "").contains("price in your currency"))
     XCTAssertEqual(api.checkoutCalls, 2)
@@ -272,7 +272,7 @@ final class CheckoutSessionTests: XCTestCase {
 
     api.payAnswer = { throw VezmoAPIError(.expired, "Secure-payments token has expired", httpStatus: 410) }
     session.pay()
-    await session.onConfirmationToken("ctoken_2")
+    await session.onPaymentMethod("pm_2")
     XCTAssertEqual(snap.phase, .closed(.failed(expiredError)))
   }
 
@@ -360,10 +360,10 @@ final class CheckoutSessionTests: XCTestCase {
     XCTAssertEqual(cardFlow.confirms, 0)
     XCTAssertEqual(element.confirms, 0)
     XCTAssertEqual(snap.paidWith, "Instant ACH")
-    await session.onConfirmationToken("ctoken_b")
+    await session.onPaymentMethod("pm_b")
     // The card flow holds the bank step, so it answers the confirmation.
     XCTAssertEqual(cardFlow.resolutions, [["pi_1_secret_b", nil]])
-    XCTAssertEqual(api.payCalls.map(\.confirmationToken), ["ctoken_b"])
+    XCTAssertEqual(api.payCalls.map(\.paymentMethodId), ["pm_b"])
     await session.onConfirmResult(.completed, message: "")
     XCTAssertEqual(snap.phase, .done(.succeeded(paymentId: "pay_1", transactionId: "VT1", subscription: nil)))
     XCTAssertEqual(snap.paidMethod?.type, "instantAch")
@@ -386,7 +386,7 @@ final class CheckoutSessionTests: XCTestCase {
     session.walletStarted("apple_pay")
     XCTAssertEqual(snap.phase, .paying)
     XCTAssertEqual(snap.paidWith, "Apple Pay")
-    await session.onConfirmationToken("ctoken_w")
+    await session.onPaymentMethod("pm_w")
     XCTAssertEqual(cardFlow.resolutions, [["pi_1_secret_w", nil]])
     XCTAssertTrue(element.resolutions.isEmpty)
   }
@@ -509,7 +509,7 @@ final class CheckoutSessionTests: XCTestCase {
     api.statusAnswer = SessionStatus(state: "succeeded", paymentId: "pay_1", transactionId: "VT1")
     session.setOption("Klarna")
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     XCTAssertEqual(element.resolutions, [[nil, ""]])
     await session.onConfirmResult(.failed, message: "engine text")
     XCTAssertEqual(snap.phase, .done(.succeeded(paymentId: "pay_1", transactionId: "VT1", subscription: nil)))
@@ -520,7 +520,7 @@ final class CheckoutSessionTests: XCTestCase {
     api.payAnswer = { PayResponse(state: "succeeded", paymentId: "pay_1", transactionId: "VT1", clientSecret: "pi_1_secret_a") }
     session.setOption("Klarna")
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     await session.onConfirmResult(.failed, message: "No launcher for a was found, did you call register?")
     XCTAssertEqual(snap.phase, .done(.succeeded(paymentId: "pay_1", transactionId: "VT1", subscription: nil)))
   }
@@ -532,14 +532,14 @@ final class CheckoutSessionTests: XCTestCase {
     api.statusAnswer = SessionStatus(state: "open", paymentId: "pay_1", transactionId: nil)
     session.setOption("Klarna")
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     XCTAssertEqual(api.statusCalls, 1)
     await session.onConfirmResult(.failed, message: "engine text")
     XCTAssertEqual(snap.phase, .ready(error: network.vezmoError))
     // The next try starts clean.
     session.pay()
     api.payAnswer = { PayResponse(state: "succeeded", paymentId: "pay_1", transactionId: "VT2", clientSecret: "pi_1_secret_a") }
-    await session.onConfirmationToken("ctoken_2")
+    await session.onPaymentMethod("pm_2")
     await session.onConfirmResult(.completed, message: "")
     XCTAssertEqual(snap.phase, .done(.succeeded(paymentId: "pay_1", transactionId: "VT2", subscription: nil)))
   }

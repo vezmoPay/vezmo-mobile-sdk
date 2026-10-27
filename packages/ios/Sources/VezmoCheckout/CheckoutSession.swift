@@ -98,7 +98,7 @@ enum CheckoutKind {
 }
 
 /// One checkout, from the session's client token (or a subscription checkout's token) to a result. The money
-/// decisions are the server's: this only moves the buyer's confirmation token to Vezmo and the answer back to the
+/// decisions are the server's: this only moves the buyer's payment method to Vezmo and the answer back to the
 /// engine.
 @MainActor
 final class CheckoutSession: ObservableObject {
@@ -433,16 +433,16 @@ final class CheckoutSession: ObservableObject {
     }
   }
 
-  /// The engine made a confirmation token: Vezmo prices and confirms the payment with it.
-  func onConfirmationToken(_ id: String) async {
+  /// The engine made a payment method (`pm_…`): Vezmo prices and confirms the payment with it.
+  func onPaymentMethod(_ id: String) async {
     do {
       let localOffer = snapshot.charge?.localOffer
       let res: PayResponse
       if kind == .subscription {
-        let answer = try await api.subscriptionPay(token: token, confirmationToken: id, localOffer: localOffer, returnURL: returnURL)
+        let answer = try await api.subscriptionPay(token: token, paymentMethodId: id, localOffer: localOffer, returnURL: returnURL)
         res = payFromSubscription(answer)
       } else {
-        res = try await api.pay(token: token, confirmationToken: id, localOffer: localOffer, returnURL: returnURL)
+        res = try await api.pay(token: token, paymentMethodId: id, localOffer: localOffer, returnURL: returnURL)
       }
       lastPay = res
       if let method = res.method { set { $0.paidMethod = method } }

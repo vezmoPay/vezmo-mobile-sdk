@@ -162,8 +162,8 @@ final class SubscriptionSessionTests: XCTestCase {
     }
     session.pay()
     XCTAssertEqual(cardFlow.confirms, 1)
-    await session.onConfirmationToken("ctoken_1")
-    XCTAssertEqual(api.subscriptionPayCalls, [.init(token: "subtok", confirmationToken: "ctoken_1", localOffer: nil, returnURL: "acme://vezmo")])
+    await session.onPaymentMethod("pm_1")
+    XCTAssertEqual(api.subscriptionPayCalls, [.init(token: "subtok", paymentMethodId: "pm_1", localOffer: nil, returnURL: "acme://vezmo")])
     XCTAssertEqual(cardFlow.resolutions, [["seti_1_secret_a", nil]])
     await session.onConfirmResult(.completed, message: "")
     XCTAssertEqual(
@@ -181,7 +181,7 @@ final class SubscriptionSessionTests: XCTestCase {
       SubscriptionPayResponse(state: "requires_action", subscriptionRef: "SUB-1", clientSecret: "pi_9_secret_b")
     }
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     XCTAssertEqual(cardFlow.resolutions, [["pi_9_secret_b", nil]])
     await session.onConfirmResult(.completed, message: "")
     XCTAssertEqual(api.subscriptionConfirmCalls, [["subtok", "pi_9"]])
@@ -199,7 +199,7 @@ final class SubscriptionSessionTests: XCTestCase {
     }
     api.subscriptionConfirmError = VezmoAPIError(.declined, "The payment was not completed.", httpStatus: 400)
     session.pay()
-    await session.onConfirmationToken("ctoken_1")
+    await session.onPaymentMethod("pm_1")
     await session.onConfirmResult(.failed, message: "Your card was declined.")
     XCTAssertEqual(api.subscriptionConfirmCalls, [["subtok", "pi_9"]])
     XCTAssertEqual(session.snapshot.phase, .ready(error: VezmoError(code: .declined, message: "The payment was not completed.")))
@@ -224,11 +224,11 @@ final class SubscriptionAPITests: XCTestCase {
     StubProtocol.answer = { _ in
       (200, ["data": ["state": "processing", "subscriptionRef": "SUB-1", "paymentId": "p", "clientSecret": NSNull()] as [String: Any]])
     }
-    let res = try await makeAPI().subscriptionPay(token: "sub", confirmationToken: "ctoken_1", localOffer: nil, returnURL: "acme://vezmo")
+    let res = try await makeAPI().subscriptionPay(token: "sub", paymentMethodId: "pm_1", localOffer: nil, returnURL: "acme://vezmo")
     XCTAssertEqual(res.state, "processing")
     let sent = try XCTUnwrap(StubProtocol.requests.first)
     XCTAssertEqual(sent.request.url?.absoluteString, "https://api.test/v1/subscription-checkout/sub/pay")
-    XCTAssertEqual(sent.body as NSDictionary?, ["confirmationToken": "ctoken_1", "integration": "ios", "returnUrl": "acme://vezmo"] as NSDictionary)
+    XCTAssertEqual(sent.body as NSDictionary?, ["paymentMethodId": "pm_1", "integration": "ios", "returnUrl": "acme://vezmo"] as NSDictionary)
   }
 
   func testAUsedLinkReadsAsExpiredOneAlreadySetUpAsAlreadyPaid() async {

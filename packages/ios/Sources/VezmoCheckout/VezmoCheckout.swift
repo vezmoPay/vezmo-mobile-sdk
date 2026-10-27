@@ -16,7 +16,7 @@ import UIKit
 @MainActor
 public final class VezmoCheckout {
   /// This SDK's version (sent to Vezmo with each call, for support).
-  nonisolated public static let version = "0.1.0"
+  nonisolated public static let version = "0.2.0"
 
   public let configuration: Configuration
   private var prepared: (session: CheckoutSession, merchantDisplayName: String?)?
