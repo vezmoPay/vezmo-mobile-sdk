@@ -18,6 +18,15 @@ class FlowTest {
     }
 
     @Test
+    fun `a method that leaves the app comes back through the engine's own link - never a card or Instant ACH`() {
+        for (type in listOf("cashapp", "klarna", "affirm", "afterpay_clearpay", "amazon_pay", null)) {
+            assertEquals("stripesdk://payment_return_url/com.acme.shop", engineReturnUrl(type, "com.acme.shop"))
+        }
+        assertNull(engineReturnUrl("card", "com.acme.shop"))
+        assertNull(engineReturnUrl("link", "com.acme.shop"))
+    }
+
+    @Test
     fun `the charge is the price, or the buyer's own currency when they chose it`() {
         assertEquals(Charge(4900, "USD", null), chargeOf(config(), false))
         assertEquals(Charge(420000, "INR", "offer_sealed"), chargeOf(config(), true))

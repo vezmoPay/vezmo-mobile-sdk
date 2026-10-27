@@ -28,7 +28,7 @@ class VezmoCheckout {
   VezmoCheckout({this.configuration = const VezmoConfiguration()});
 
   /// This plugin's version.
-  static const String version = '0.1.0';
+  static const String version = '0.2.0';
 
   final VezmoConfiguration configuration;
 

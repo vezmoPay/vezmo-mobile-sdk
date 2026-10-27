@@ -56,15 +56,15 @@ final class APITests: XCTestCase {
   func testAVezmoWrapperNamesItselfInTheSDKHeader() async throws {
     StubProtocol.answer = { _ in (200, ["success": true, "data": ["state": "processing", "paymentId": "p", "clientSecret": NSNull()] as [String: Any]]) }
     let api = VezmoAPI(base: URL(string: "https://api.test/v1")!, urlSession: StubProtocol.session(), sdk: "flutter/0.1.0")
-    _ = try await api.pay(token: "t", confirmationToken: "c", localOffer: nil, returnURL: nil)
+    _ = try await api.pay(token: "t", paymentMethodId: "c", localOffer: nil, returnURL: nil)
     let sent = try XCTUnwrap(StubProtocol.requests.first)
     XCTAssertEqual(sent.request.value(forHTTPHeaderField: "Vezmo-SDK"), "flutter/0.1.0")
   }
 
-  func testPaysWithTheTokenOurIntegrationAndSDKHeaderAndUnwrapsTheData() async throws {
+  func testPaysWithThePaymentMethodOurIntegrationAndSDKHeaderAndUnwrapsTheData() async throws {
     StubProtocol.answer = { _ in (200, ["success": true, "data": ["state": "processing", "paymentId": "p", "clientSecret": NSNull()] as [String: Any]]) }
     let api = makeAPI()
-    let res = try await api.pay(token: "tok/1", confirmationToken: "ctoken_1", localOffer: "o", returnURL: "acme://vezmo")
+    let res = try await api.pay(token: "tok/1", paymentMethodId: "pm_1", localOffer: "o", returnURL: "acme://vezmo")
     XCTAssertEqual(res.state, "processing")
     XCTAssertNil(res.clientSecret)
     let sent = try XCTUnwrap(StubProtocol.requests.first)
@@ -73,7 +73,7 @@ final class APITests: XCTestCase {
     let sdk = try XCTUnwrap(sent.request.value(forHTTPHeaderField: "Vezmo-SDK"))
     XCTAssertNotNil(sdk.range(of: #"^ios/\d+\.\d+\.\d+"#, options: .regularExpression), sdk)
     XCTAssertEqual(sent.body as NSDictionary?, [
-      "confirmationToken": "ctoken_1",
+      "paymentMethodId": "pm_1",
       "integration": "ios",
       "localOffer": "o",
       "returnUrl": "acme://vezmo",
@@ -86,25 +86,25 @@ final class APITests: XCTestCase {
 
     StubProtocol.answer = { _ in (400, ["message": "Your bank declined this card."]) }
     let declined = await assertThrows(code: .declined) {
-      try await self.makeAPI().pay(token: "t", confirmationToken: "c", localOffer: nil, returnURL: nil)
+      try await self.makeAPI().pay(token: "t", paymentMethodId: "c", localOffer: nil, returnURL: nil)
     }
     XCTAssertEqual(declined?.message, "Your bank declined this card.")
 
     StubProtocol.answer = { _ in (409, ["message": "Price changed", "errors": [["code": "local_price_changed", "message": "x"]]] as [String: Any]) }
     let priceChanged = await assertThrows(code: .unknown) {
-      try await self.makeAPI().pay(token: "t", confirmationToken: "c", localOffer: nil, returnURL: nil)
+      try await self.makeAPI().pay(token: "t", paymentMethodId: "c", localOffer: nil, returnURL: nil)
     }
     XCTAssertEqual(priceChanged?.reason, "local_price_changed")
 
     StubProtocol.answer = { _ in (400, ["message": "Register acme://vezmo for this business.", "errors": [["code": "return_url_not_registered", "message": "Register acme://vezmo for this business."]]] as [String: Any]) }
     let unregistered = await assertThrows(code: .config) {
-      try await self.makeAPI().pay(token: "t", confirmationToken: "c", localOffer: nil, returnURL: "acme://vezmo")
+      try await self.makeAPI().pay(token: "t", paymentMethodId: "c", localOffer: nil, returnURL: "acme://vezmo")
     }
     XCTAssertEqual(unregistered?.message, "Register acme://vezmo for this business.")
 
     StubProtocol.answer = { _ in (400, ["errors": [["code": "method_unavailable", "message": "This way to pay is not available."]]] as [String: Any]) }
     await assertThrows(code: .notAvailable) {
-      try await self.makeAPI().subscriptionPay(token: "t", confirmationToken: "c", localOffer: nil, returnURL: nil)
+      try await self.makeAPI().subscriptionPay(token: "t", paymentMethodId: "c", localOffer: nil, returnURL: nil)
     }
 
     StubProtocol.answer = { _ in (409, ["message": "This checkout was already paid."]) }
@@ -117,8 +117,8 @@ final class APITests: XCTestCase {
   func testSendsTheReturnLinkOnlyWhenThereIsOne() async throws {
     StubProtocol.answer = { _ in (200, ["data": ["state": "succeeded", "paymentId": "p", "transactionId": "VT1"]]) }
     let api = makeAPI()
-    _ = try await api.pay(token: "t", confirmationToken: "c", localOffer: nil, returnURL: nil)
-    XCTAssertEqual(StubProtocol.requests.first?.body as NSDictionary?, ["confirmationToken": "c", "integration": "ios"] as NSDictionary)
+    _ = try await api.pay(token: "t", paymentMethodId: "c", localOffer: nil, returnURL: nil)
+    XCTAssertEqual(StubProtocol.requests.first?.body as NSDictionary?, ["paymentMethodId": "c", "integration": "ios"] as NSDictionary)
   }
 
   func testStartsUPIOnTheSessionIntent() async throws {

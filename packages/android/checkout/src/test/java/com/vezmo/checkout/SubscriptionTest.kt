@@ -37,8 +37,8 @@ private class FakeSubscriptionApi(var view: JSONObject = view()) : CheckoutApi {
 
     override suspend fun subscription(token: String, currency: String?) = load()
 
-    override suspend fun subscriptionPay(token: String, confirmationToken: String, localOffer: String?): PayResponse {
-        payArgs = listOf(token, confirmationToken, localOffer)
+    override suspend fun subscriptionPay(token: String, paymentMethodId: String, localOffer: String?): PayResponse {
+        payArgs = listOf(token, paymentMethodId, localOffer)
         return PayResponse.fromSubscription(payAnswer!!)
     }
 
@@ -50,7 +50,7 @@ private class FakeSubscriptionApi(var view: JSONObject = view()) : CheckoutApi {
 
     override suspend fun checkout(token: String, currency: String?): CheckoutConfig = error("one-time checkout used")
 
-    override suspend fun pay(token: String, confirmationToken: String, localOffer: String?, returnUrl: String?): PayResponse = error("one-time pay used")
+    override suspend fun pay(token: String, paymentMethodId: String, localOffer: String?, returnUrl: String?): PayResponse = error("one-time pay used")
 
     override suspend fun intent(token: String, localOffer: String?): SessionIntent = error("not used")
 
@@ -86,7 +86,7 @@ class SubscriptionTest {
     private class Setup(scope: TestScope, v: JSONObject = view()) {
         val api = FakeSubscriptionApi(v)
         val cardFlow = CardFlow()
-        val session = CheckoutSession(api, "subtok", "acme://vezmo", UnconfinedTestDispatcher(scope.testScheduler), subscription = true)
+        val session = CheckoutSession(api, "subtok", UnconfinedTestDispatcher(scope.testScheduler), subscription = true)
             .also { it.attachCardFlow(cardFlow) }
 
         /** The buyer types a card in the card form. */
@@ -151,8 +151,8 @@ class SubscriptionTest {
         )
         t.session.pay()
         assertEquals(1, t.cardFlow.confirms)
-        t.session.onConfirmationToken("ctoken_1")
-        assertEquals(listOf("subtok", "ctoken_1", null), t.api.payArgs)
+        t.session.onPaymentMethod("pm_1")
+        assertEquals(listOf("subtok", "pm_1", null), t.api.payArgs)
         assertEquals(listOf<Pair<String?, String?>>("seti_1_secret_a" to null), t.cardFlow.resolved)
         t.session.onConfirmResult(ConfirmStatus.Completed, "")
         assertEquals(
@@ -172,12 +172,32 @@ class SubscriptionTest {
         )
         t.api.confirmAnswer = resultFromSubscriptionConfirm("active", "SUB-1", "pay_9", "VT9")
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_1")
+        t.session.onPaymentMethod("pm_1")
         assertEquals(listOf<Pair<String?, String?>>("pi_9_secret_b" to null), t.cardFlow.resolved)
         t.session.onConfirmResult(ConfirmStatus.Completed, "")
         assertEquals(listOf("subtok:pi_9"), t.api.confirms)
         assertEquals(
             SessionPhase.Done(CheckoutResult.Succeeded("pay_9", "VT9", SubscriptionResult("SUB-1", SubscriptionResult.Status.Active))),
+            t.session.state.value.phase,
+        )
+        t.session.dispose()
+    }
+
+    @Test
+    fun `a decline at our confirm after 3D Secure (the engine completed) - the sheet stays ready, in Vezmo's words`() = runTest {
+        val t = Setup(this, firstPayment())
+        t.session.load()
+        t.chooseCard()
+        t.api.payAnswer = JSONObject(
+            """{"state":"requires_action","subscriptionRef":"SUB-1","clientSecret":"pi_9_secret_b","method":null}""",
+        )
+        t.api.confirmError = VezmoApiError(VezmoError.Code.Declined, "Payment declined by your bank (issuer).", 400)
+        t.session.pay()
+        t.session.onPaymentMethod("pm_1")
+        t.session.onConfirmResult(ConfirmStatus.Completed, "")
+        assertEquals(listOf("subtok:pi_9"), t.api.confirms)
+        assertEquals(
+            SessionPhase.Ready(VezmoError(VezmoError.Code.Declined, "Payment declined by your bank (issuer).")),
             t.session.state.value.phase,
         )
         t.session.dispose()
@@ -193,7 +213,7 @@ class SubscriptionTest {
         )
         t.api.confirmError = VezmoApiError(VezmoError.Code.Declined, "The payment was not completed.", 400)
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_1")
+        t.session.onPaymentMethod("pm_1")
         t.session.onConfirmResult(ConfirmStatus.Failed, "Your payment method was declined.")
         assertEquals(listOf("subtok:pi_9"), t.api.confirms)
         assertEquals(

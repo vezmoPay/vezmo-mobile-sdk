@@ -32,9 +32,9 @@ private class FakeApi : CheckoutApi {
         return checkout()
     }
 
-    override suspend fun pay(token: String, confirmationToken: String, localOffer: String?, returnUrl: String?): PayResponse {
+    override suspend fun pay(token: String, paymentMethodId: String, localOffer: String?, returnUrl: String?): PayResponse {
         calls += "pay"
-        payArgs = listOf(token, confirmationToken, localOffer, returnUrl)
+        payArgs = listOf(token, paymentMethodId, localOffer, returnUrl)
         return pay()
     }
 
@@ -63,7 +63,7 @@ private class FakeApi : CheckoutApi {
 
     override suspend fun subscription(token: String, currency: String?): CheckoutConfig = error("not a subscription")
 
-    override suspend fun subscriptionPay(token: String, confirmationToken: String, localOffer: String?): PayResponse = error("not a subscription")
+    override suspend fun subscriptionPay(token: String, paymentMethodId: String, localOffer: String?): PayResponse = error("not a subscription")
 
     override suspend fun subscriptionConfirm(token: String, intentId: String): CheckoutResult = error("not a subscription")
 }
@@ -119,7 +119,7 @@ private class Setup(scope: TestScope) {
     val api = FakeApi()
     val element = FakeElement()
     val cardFlow = FakeCardFlow()
-    val session = CheckoutSession(api, "tok", "acme://vezmo/return", UnconfinedTestDispatcher(scope.testScheduler)).also {
+    val session = CheckoutSession(api, "tok", UnconfinedTestDispatcher(scope.testScheduler)).also {
         it.attachElement(element)
         it.attachCardFlow(cardFlow)
     }
@@ -151,10 +151,11 @@ class CheckoutSessionTest {
         t.session.setOption("Klarna")
         t.session.pay()
         assertEquals(1, t.element.confirms)
-        t.session.onConfirmationToken("ctoken_1")
+        // A method that leaves the app: the engine's own way back into the sheet goes to Vezmo with it.
+        t.session.onPaymentMethod("pm_1", "stripesdk://payment_return_url/com.acme.shop")
         // The receipt's Visa mark and last four come from the server's reading of the payment.
         assertEquals(method, t.snap.paidMethod)
-        assertEquals(listOf("tok", "ctoken_1", null, "acme://vezmo/return"), t.api.payArgs)
+        assertEquals(listOf("tok", "pm_1", null, "stripesdk://payment_return_url/com.acme.shop"), t.api.payArgs)
         assertEquals(listOf<Pair<String?, String?>>("pi_1_secret_a" to null), t.element.resolved)
         t.session.onConfirmResult(ConfirmStatus.Completed, "")
         assertEquals(SessionPhase.Done(CheckoutResult.Succeeded("pay_1", "VT1")), t.snap.phase)
@@ -166,7 +167,7 @@ class CheckoutSessionTest {
         t.api.pay = { PayResponse("requires_action", "pay_1", null, "pi_9_secret_b", null) }
         t.session.setOption("Klarna")
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_1")
+        t.session.onPaymentMethod("pm_1")
         t.session.onConfirmResult(ConfirmStatus.Completed, "")
         assertTrue("confirm:tok:pi_9" in t.api.calls)
         assertEquals(SessionPhase.Done(CheckoutResult.Succeeded("pay_1", "VT1")), t.snap.phase)
@@ -177,7 +178,7 @@ class CheckoutSessionTest {
         t.api.pay = { PayResponse("requires_action", "pay_1", null, "pi_9_secret_b", null) }
         t.session.setOption("Cash App Pay")
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_1")
+        t.session.onPaymentMethod("pm_1")
         t.session.onConfirmResult(ConfirmStatus.Failed, "engine text")
         assertEquals(SessionPhase.Done(CheckoutResult.Succeeded("pay_1", "VT1")), t.snap.phase)
 
@@ -189,7 +190,7 @@ class CheckoutSessionTest {
         u.session.load()
         u.session.setOption("Cash App Pay")
         u.session.pay()
-        u.session.onConfirmationToken("ctoken_1")
+        u.session.onPaymentMethod("pm_1")
         u.session.onConfirmResult(ConfirmStatus.Failed, "")
         assertEquals(SessionPhase.Ready(DECLINED), u.snap.phase)
         u.session.dispose()
@@ -203,7 +204,7 @@ class CheckoutSessionTest {
         t.session.chooseCard()
         t.session.setCard(CardChoice("•••• 0002", null))
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_1")
+        t.session.onPaymentMethod("pm_1")
         // The engine's own words differ by platform ("Your payment method was declined." here, another on iPhone).
         t.session.onConfirmResult(ConfirmStatus.Failed, "Your payment method was declined.")
         assertTrue("confirm:tok:pi_9" in t.api.calls)
@@ -217,9 +218,37 @@ class CheckoutSessionTest {
         u.session.load()
         u.session.setOption("Klarna")
         u.session.pay()
-        u.session.onConfirmationToken("ctoken_1")
+        u.session.onPaymentMethod("pm_1")
         u.session.onConfirmResult(ConfirmStatus.Failed, "engine text")
         assertEquals(SessionPhase.Ready(VezmoError(VezmoError.Code.Declined, "engine text")), u.snap.phase)
+        u.session.dispose()
+    }
+
+    @Test
+    fun `a decline at our confirm after 3D Secure (the engine completed) - the sheet stays ready, in our words`() = test { t ->
+        // A card our server confirms (manual confirmation): back from 3D Secure the engine reports completed, and the
+        // bank's answer comes from our confirm step.
+        t.api.pay = { PayResponse("requires_action", "pay_1", null, "pi_9_secret_b", null) }
+        t.api.status = SessionStatus("failed", "pay_1", null)
+        t.api.confirmError = VezmoApiError(VezmoError.Code.Declined, "Payment declined by your bank (issuer).", 400)
+        t.session.chooseCard()
+        t.session.setCard(CardChoice("•••• 0002", null))
+        t.session.pay()
+        t.session.onPaymentMethod("pm_1")
+        t.session.onConfirmResult(ConfirmStatus.Completed, "")
+        assertTrue("confirm:tok:pi_9" in t.api.calls)
+        assertEquals(SessionPhase.Ready(VezmoError(VezmoError.Code.Declined, "Payment declined by your bank (issuer).")), t.snap.phase)
+
+        // A step still running: the status says how it stands, as before.
+        val u = Setup(this)
+        u.api.pay = { PayResponse("requires_action", "pay_1", null, "pi_9_secret_b", null) }
+        u.api.confirmError = VezmoApiError(VezmoError.Code.Declined, "Still verifying.", 400, "requires_action")
+        u.session.load()
+        u.session.setOption("Klarna")
+        u.session.pay()
+        u.session.onPaymentMethod("pm_1")
+        u.session.onConfirmResult(ConfirmStatus.Completed, "")
+        assertEquals(SessionPhase.Done(CheckoutResult.Succeeded("pay_1", "VT1")), u.snap.phase)
         u.session.dispose()
     }
 
@@ -271,7 +300,7 @@ class CheckoutSessionTest {
         t.api.pay = { throw VezmoApiError(VezmoError.Code.Declined, "Your bank declined this card.", 400) }
         t.session.setOption("Klarna")
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_1")
+        t.session.onPaymentMethod("pm_1")
         assertEquals(listOf<Pair<String?, String?>>(null to "Your bank declined this card."), t.element.resolved)
         t.session.onConfirmResult(ConfirmStatus.Failed, "processor text")
         assertEquals(SessionPhase.Ready(VezmoError(VezmoError.Code.Declined, "Your bank declined this card.")), t.snap.phase)
@@ -282,7 +311,7 @@ class CheckoutSessionTest {
         t.api.pay = { throw VezmoApiError(VezmoError.Code.Unknown, "Price changed", 409, "local_price_changed") }
         t.session.setOption("Klarna")
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_1")
+        t.session.onPaymentMethod("pm_1")
         assertTrue(t.element.resolved.single().second!!.contains("price in your currency"))
         assertEquals(2, t.api.calls.count { it == "checkout" })
     }
@@ -296,7 +325,7 @@ class CheckoutSessionTest {
 
         t.api.pay = { throw VezmoApiError(VezmoError.Code.Expired, "Secure-payments token has expired", 410) }
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_2")
+        t.session.onPaymentMethod("pm_2")
         val closed = t.snap.phase as SessionPhase.Closed
         assertEquals(VezmoError.Code.Expired, (closed.result as CheckoutResult.Failed).error.code)
     }
@@ -361,10 +390,10 @@ class CheckoutSessionTest {
         assertEquals(0, t.cardFlow.confirms)
         assertEquals(0, t.element.confirms)
         assertEquals("Instant ACH", t.snap.paidWith)
-        t.session.onConfirmationToken("ctoken_b")
+        t.session.onPaymentMethod("pm_b")
         // The card flow holds the bank step, so it answers the confirmation.
         assertEquals(listOf<Pair<String?, String?>>("pi_1_secret_b" to null), t.cardFlow.resolved)
-        assertEquals("ctoken_b", t.api.payArgs!![1])
+        assertEquals("pm_b", t.api.payArgs!![1])
         t.session.onConfirmResult(ConfirmStatus.Completed, "")
         assertEquals(SessionPhase.Done(CheckoutResult.Succeeded("pay_1", "VT1")), t.snap.phase)
         assertEquals("instantAch", t.snap.paidMethod?.type)
@@ -417,7 +446,7 @@ class CheckoutSessionTest {
         t.session.walletStarted("google_pay")
         assertEquals(SessionPhase.Paying, t.snap.phase)
         assertEquals("Google Pay", t.snap.paidWith)
-        t.session.onConfirmationToken("ctoken_w")
+        t.session.onPaymentMethod("pm_w")
         assertEquals(listOf<Pair<String?, String?>>("pi_1_secret_w" to null), t.cardFlow.resolved)
         assertTrue(t.element.resolved.isEmpty())
     }
@@ -527,7 +556,7 @@ class CheckoutSessionTest {
         t.api.pay = { throw noAnswer }
         t.session.setOption("Klarna")
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_1")
+        t.session.onPaymentMethod("pm_1")
         assertEquals(listOf<Pair<String?, String?>>(null to ""), t.element.resolved)
         t.session.onConfirmResult(ConfirmStatus.Failed, "engine text")
         assertEquals(SessionPhase.Done(CheckoutResult.Succeeded("pay_1", "VT1")), t.snap.phase)
@@ -538,7 +567,7 @@ class CheckoutSessionTest {
         t.api.pay = { PayResponse("succeeded", "pay_1", "VT1", "pi_1_secret_a", null) }
         t.session.setOption("Klarna")
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_1")
+        t.session.onPaymentMethod("pm_1")
         t.session.onConfirmResult(ConfirmStatus.Failed, "No launcher for a was found, did you call register?")
         assertEquals(SessionPhase.Done(CheckoutResult.Succeeded("pay_1", "VT1")), t.snap.phase)
     }
@@ -549,7 +578,7 @@ class CheckoutSessionTest {
         t.api.status = SessionStatus("open", "pay_1", null)
         t.session.setOption("Klarna")
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_1")
+        t.session.onPaymentMethod("pm_1")
         assertEquals(1, t.api.calls.count { it == "status" })
         assertEquals(listOf<Pair<String?, String?>>(null to noAnswer.message), t.element.resolved)
         t.session.onConfirmResult(ConfirmStatus.Failed, "engine text")
@@ -557,7 +586,7 @@ class CheckoutSessionTest {
 
         t.api.pay = { PayResponse("succeeded", "pay_1", "VT2", "pi_1_secret_a", null) }
         t.session.pay()
-        t.session.onConfirmationToken("ctoken_2")
+        t.session.onPaymentMethod("pm_2")
         t.session.onConfirmResult(ConfirmStatus.Completed, "")
         assertEquals(SessionPhase.Done(CheckoutResult.Succeeded("pay_1", "VT2")), t.snap.phase)
     }

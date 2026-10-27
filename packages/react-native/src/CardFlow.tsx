@@ -10,7 +10,7 @@ export interface CardFlowHandle {
   presentBank(): void;
   /** Pay with the bank account the bank step linked. The outcome arrives in `onConfirmResult`. */
   confirmBank(): void;
-  /** Answer `onConfirmationToken` with the intent's client secret, or an error message to show. */
+  /** Answer `onPaymentMethod` with the intent's client secret, or an error message to show. */
   resolveConfirmation(clientSecret: string | null, errorMessage?: string): void;
   /** The app was opened with a link: finishes a payment waiting on it (iOS; Android returns by itself). */
   handleURL(url: string): void;
@@ -29,7 +29,7 @@ export interface CardFlowProps {
   onWalletsHeight?: (height: number) => void;
   /** A wallet button was tapped: the payment has started. */
   onWalletTap?: (wallet: string) => void;
-  onConfirmationToken: (id: string) => void;
+  onPaymentMethod: (id: string, engineReturnUrl: string | null) => void;
   onConfirmResult: (status: 'completed' | 'canceled' | 'failed', message: string) => void;
 }
 
@@ -79,7 +79,7 @@ export const CardFlow = forwardRef<CardFlowHandle, CardFlowProps>(function CardF
       }
       onBankChange={(e) => props.onBankChange?.({ available: e.nativeEvent.available, label: e.nativeEvent.label })}
       onWalletTap={(e) => props.onWalletTap?.(e.nativeEvent.wallet)}
-      onConfirmationToken={(e) => props.onConfirmationToken(e.nativeEvent.id)}
+      onPaymentMethod={(e) => props.onPaymentMethod(e.nativeEvent.id, e.nativeEvent.returnUrl || null)}
       onConfirmResult={(e) =>
         props.onConfirmResult(e.nativeEvent.status as 'completed' | 'canceled' | 'failed', e.nativeEvent.message)
       }

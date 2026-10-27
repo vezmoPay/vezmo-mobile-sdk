@@ -68,7 +68,7 @@ class VezmoMethodsViewManager :
       "topLoadFailed" to mapOf("registrationName" to "onLoadFailed"),
       "topHeightChange" to mapOf("registrationName" to "onHeightChange"),
       "topPaymentOptionChange" to mapOf("registrationName" to "onPaymentOptionChange"),
-      "topConfirmationToken" to mapOf("registrationName" to "onConfirmationToken"),
+      "topPaymentMethod" to mapOf("registrationName" to "onPaymentMethod"),
       "topConfirmResult" to mapOf("registrationName" to "onConfirmResult"),
     )
 

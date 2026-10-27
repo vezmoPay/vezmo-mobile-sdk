@@ -1,7 +1,7 @@
 // The plugin's Android side: a thin bridge from Dart to the native Vezmo Android SDK (com.vezmo:vezmo-checkout),
 // which draws the sheet.
 group = "com.vezmo.flutter.checkout"
-version = "0.1.0"
+version = "0.2.0"
 
 buildscript {
     val kotlinVersion = "2.4.0"
@@ -71,7 +71,7 @@ kotlin {
 
 dependencies {
     // The native SDK, pinned exactly: the plugin's version and the SDK's move together.
-    implementation("com.vezmo:vezmo-checkout:0.1.0")
+    implementation("com.vezmo:vezmo-checkout:0.2.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     testImplementation("junit:junit:4.13.2")

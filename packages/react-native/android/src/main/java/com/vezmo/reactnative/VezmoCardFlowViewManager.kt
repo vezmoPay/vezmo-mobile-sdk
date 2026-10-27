@@ -84,7 +84,7 @@ class VezmoCardFlowViewManager :
       "topCardOptionChange" to mapOf("registrationName" to "onCardOptionChange"),
       "topBankChange" to mapOf("registrationName" to "onBankChange"),
       "topWalletTap" to mapOf("registrationName" to "onWalletTap"),
-      "topConfirmationToken" to mapOf("registrationName" to "onConfirmationToken"),
+      "topPaymentMethod" to mapOf("registrationName" to "onPaymentMethod"),
       "topConfirmResult" to mapOf("registrationName" to "onConfirmResult"),
     )
 

@@ -21,14 +21,14 @@ struct VezmoAPIError: Error, Equatable {
 /// The buyer-side calls of an API checkout session (a protocol so the session's tests can answer them).
 protocol CheckoutAPI {
   func checkout(token: String) async throws -> CheckoutConfig
-  func pay(token: String, confirmationToken: String, localOffer: String?, returnURL: String?) async throws -> PayResponse
+  func pay(token: String, paymentMethodId: String, localOffer: String?, returnURL: String?) async throws -> PayResponse
   func intent(token: String, localOffer: String?) async throws -> SessionIntent
   func startQr(_ method: QrMethod, intent: SessionIntent, returnURL: String, billing: QrBilling) async throws -> QrPayment
   func checkoutPageURL(token: String) -> String
   func confirm(token: String, paymentIntentId: String) async throws
   func status(token: String) async throws -> SessionStatus
   func subscription(token: String) async throws -> SubscriptionView
-  func subscriptionPay(token: String, confirmationToken: String, localOffer: String?, returnURL: String?) async throws -> SubscriptionPayResponse
+  func subscriptionPay(token: String, paymentMethodId: String, localOffer: String?, returnURL: String?) async throws -> SubscriptionPayResponse
   func subscriptionConfirm(token: String, intentId: String) async throws -> SubscriptionConfirm
 }
 
@@ -53,8 +53,8 @@ struct VezmoAPI: CheckoutAPI {
     try await call("POST", "/secure-payments/\(encode(token))/checkout?redirectMethods=1")
   }
 
-  func pay(token: String, confirmationToken: String, localOffer: String?, returnURL: String?) async throws -> PayResponse {
-    var body: [String: Any] = ["confirmationToken": confirmationToken, "integration": "ios"]
+  func pay(token: String, paymentMethodId: String, localOffer: String?, returnURL: String?) async throws -> PayResponse {
+    var body: [String: Any] = ["paymentMethodId": paymentMethodId, "integration": "ios"]
     if let localOffer, !localOffer.isEmpty { body["localOffer"] = localOffer }
     if let returnURL, !returnURL.isEmpty { body["returnUrl"] = returnURL }
     return try await call("POST", "/secure-payments/\(encode(token))/pay", body: body)
@@ -110,9 +110,9 @@ struct VezmoAPI: CheckoutAPI {
     }
   }
 
-  /// Subscribe: our server confirms the first payment, or a free trial's card, with the confirmation token.
-  func subscriptionPay(token: String, confirmationToken: String, localOffer: String?, returnURL: String?) async throws -> SubscriptionPayResponse {
-    var body: [String: Any] = ["confirmationToken": confirmationToken, "integration": "ios"]
+  /// Subscribe: our server confirms the first payment, or a free trial's card, with the payment method (`pm_…`).
+  func subscriptionPay(token: String, paymentMethodId: String, localOffer: String?, returnURL: String?) async throws -> SubscriptionPayResponse {
+    var body: [String: Any] = ["paymentMethodId": paymentMethodId, "integration": "ios"]
     if let localOffer, !localOffer.isEmpty { body["localOffer"] = localOffer }
     if let returnURL, !returnURL.isEmpty { body["returnUrl"] = returnURL }
     return try await call("POST", "/subscription-checkout/\(encode(token))/pay", body: body)

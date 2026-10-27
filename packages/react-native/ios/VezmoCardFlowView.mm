@@ -66,8 +66,8 @@ static std::string VZCardString(id value)
     emitter->onBankChange({.available = [body[@"available"] boolValue], .label = VZCardString(body[@"label"])});
   } else if ([name isEqualToString:@"walletTap"]) {
     emitter->onWalletTap({.wallet = VZCardString(body[@"wallet"])});
-  } else if ([name isEqualToString:@"confirmationToken"]) {
-    emitter->onConfirmationToken({.id = VZCardString(body[@"id"])});
+  } else if ([name isEqualToString:@"paymentMethod"]) {
+    emitter->onPaymentMethod({.id = VZCardString(body[@"id"])});
   } else if ([name isEqualToString:@"confirmResult"]) {
     emitter->onConfirmResult({.status = VZCardString(body[@"status"]), .message = VZCardString(body[@"message"])});
   }

@@ -7,7 +7,7 @@ import PackageDescription
 
 let repository = "https://github.com/vezmoPay/vezmo-mobile-sdk"
 let sdk: Package.Dependency = Context.environment["VEZMO_IOS_SDK_REVISION"].map { .package(url: repository, revision: $0) }
-    ?? .package(url: repository, from: "0.1.0")
+    ?? .package(url: repository, from: "0.2.0")
 
 let package = Package(
     name: "vezmo_checkout",

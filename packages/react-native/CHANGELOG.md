@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (unreleased)
 
+- **A payment method, not a confirmation token**: every payment, subscription and free trial now sends Vezmo the
+  payment method the buyer chose (`paymentMethodId`, `pm_…`) instead of a confirmation token, on iPhone and Android.
+  Vezmo's server confirms every card payment itself, and only a payment method can be confirmed that way. 3D Secure,
+  Apple Pay, Google Pay and the buyer's own currency work as before; nothing changes in your app. Apps on 0.1.x keep
+  working for now: update to 0.2.0.
 - **Instant ACH**: buyers pay from a US bank account. When the business offers it, the sheet has an Instant ACH row
   (US dollars only, never in the buyer's own currency) that opens a secure bank-connection step; the payment confirms
   at once and the receipt reads "Paid with Instant ACH". Subscriptions save the bank account for the renewals; a free
@@ -13,6 +18,9 @@
 The same SDK as 0.1.0, published again: 0.1.0 was removed from npm by mistake on 24 Oct 2026, and npm never lets a
 removed version number be used again. Nothing changes in your app; update with `npm install @vezmopay/react-native@0.1.1`.
 
+- **Android: Cash App and pay-later methods need your app registered**: the sheet now sends Vezmo its own way back
+  into the sheet for a method that leaves the app, and Vezmo takes it only for an Android app added under
+  **Developers → Mobile apps** with its package name. Cards, Google Pay and Instant ACH work without it.
 - **New repository address**: the source moved to `github.com/vezmoPay/vezmo-mobile-sdk` (the old
   `ACCEPT-GLOBAL-LIMITED` address redirects). Package metadata and links point to it.
 

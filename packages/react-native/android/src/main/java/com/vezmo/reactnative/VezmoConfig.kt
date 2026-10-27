@@ -14,6 +14,16 @@ internal const val CARD_LOADING = "The card form is still loading. Try again in 
 /** Instant ACH's bank step isn't set up yet. */
 internal const val BANK_LOADING = "Instant ACH is still loading. Try again in a moment."
 
+/**
+ * The payment engine's own return link (`stripesdk://payment_return_url/<package>`, what it opens to bring the buyer
+ * back into the open sheet) for a method that leaves the app: a bank app or a pay-later provider (Cash App, Klarna,
+ * Affirm, Afterpay, Amazon Pay). Vezmo's API takes it for a business that registered this app (Developers → Mobile
+ * apps, Android, this package). Null for a card (3D Secure and Google Pay included) and Instant ACH, which come back
+ * without it: they keep working for a business that registered no app. The same rule as the native Android SDK.
+ */
+internal fun engineReturnUrl(paymentMethodType: String?, packageName: String): String? =
+  if (paymentMethodType == "card" || paymentMethodType == "link") null else "stripesdk://payment_return_url/$packageName"
+
 internal fun parseJson(json: String): JSONObject? =
   if (json.isEmpty()) {
     null

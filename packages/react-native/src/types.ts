@@ -153,7 +153,7 @@ export type MethodKey =
   | 'pix'
   | 'instantAch';
 
-/** POST …/pay — what the server did with the buyer's confirmation token. */
+/** POST …/pay — what the server did with the buyer's payment method. */
 export type PayResponse = (
   | { state: 'succeeded'; paymentId: string | null; transactionId: string | null; clientSecret: string | null }
   | { state: 'processing'; paymentId: string | null; clientSecret: string | null }

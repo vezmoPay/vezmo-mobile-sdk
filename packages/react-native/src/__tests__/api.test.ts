@@ -7,23 +7,32 @@ const fail = (status: number, body: unknown) =>
   ({ ok: false, status, json: async () => body }) as unknown as Response;
 
 describe('VezmoApi', () => {
-  it('pays with the token, our integration and SDK header; unwraps the data', async () => {
+  it('pays with the payment method, our integration and SDK header; unwraps the data', async () => {
     const fetchImpl = jest
       .fn<typeof fetch>()
       .mockResolvedValue(ok({ state: 'processing', paymentId: 'p', clientSecret: null }));
     const api = new VezmoApi('https://api.test/v1', 'android', fetchImpl);
-    const res = await api.pay('tok/1', { confirmationToken: 'ctoken_1', localOffer: 'o', returnUrl: 'acme://vezmo' });
+    const res = await api.pay('tok/1', {
+      paymentMethodId: 'pm_1',
+      localOffer: 'o',
+      returnUrl: 'acme://vezmo',
+      engineReturnUrl: 'stripesdk://payment_return_url/com.acme.shop',
+    });
     expect(res.state).toBe('processing');
     const [url, init] = fetchImpl.mock.calls[0]!;
     expect(url).toBe('https://api.test/v1/secure-payments/tok%2F1/pay');
     expect(init?.method).toBe('POST');
     expect((init?.headers as Record<string, string>)['Vezmo-SDK']).toMatch(/^react-native\/\d+\.\d+\.\d+/);
-    // Android leaves the return to the confirmation token's own link (the payment engine's way back into the app).
+    // A payment method, never a confirmation token. Android: the engine's own way back, never the app's link.
     expect(JSON.parse(init?.body as string)).toEqual({
-      confirmationToken: 'ctoken_1',
+      paymentMethodId: 'pm_1',
       integration: 'android',
       localOffer: 'o',
+      returnUrl: 'stripesdk://payment_return_url/com.acme.shop',
     });
+    // A card on Android: no return link at all.
+    await api.pay('t', { paymentMethodId: 'pm_2', returnUrl: 'acme://vezmo', engineReturnUrl: null });
+    expect(JSON.parse(fetchImpl.mock.calls[1]![1]?.body as string)).toEqual({ paymentMethodId: 'pm_2', integration: 'android' });
   });
 
   it("sends the app's return link from iOS, where the sheet hands it to the payment", async () => {
@@ -31,13 +40,13 @@ describe('VezmoApi', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(ok({ state: 'processing', paymentId: 'p', clientSecret: null }));
     await new VezmoApi('https://api.test/v1', 'ios', fetchImpl).subscriptionPay('sub', {
-      confirmationToken: 'ctoken_1',
+      paymentMethodId: 'pm_1',
       returnUrl: 'acme://vezmo',
     });
     const [url, init] = fetchImpl.mock.calls[0]!;
     expect(url).toBe('https://api.test/v1/subscription-checkout/sub/pay');
     expect(JSON.parse(init?.body as string)).toEqual({
-      confirmationToken: 'ctoken_1',
+      paymentMethodId: 'pm_1',
       integration: 'ios',
       returnUrl: 'acme://vezmo',
     });
@@ -50,12 +59,12 @@ describe('VezmoApi', () => {
       code: 'expired',
     });
     await expect(
-      api(fail(400, { message: 'Your bank declined this card.' })).pay('t', { confirmationToken: 'c' }),
+      api(fail(400, { message: 'Your bank declined this card.' })).pay('t', { paymentMethodId: 'c' }),
     ).rejects.toMatchObject({ code: 'declined', message: 'Your bank declined this card.' });
     const priceChanged = (await api(
       fail(409, { message: 'Price changed', errors: [{ code: 'local_price_changed', message: 'x' }] }),
     )
-      .pay('t', { confirmationToken: 'c' })
+      .pay('t', { paymentMethodId: 'c' })
       .catch((e: unknown) => e)) as VezmoApiError;
     expect(priceChanged.reason).toBe('local_price_changed');
     await expect(
@@ -64,12 +73,12 @@ describe('VezmoApi', () => {
           message: 'Bad Request',
           errors: [{ code: 'return_url_not_registered', message: 'Register acme://vezmo for this business.' }],
         }),
-      ).pay('t', { confirmationToken: 'c', returnUrl: 'acme://vezmo' }),
+      ).pay('t', { paymentMethodId: 'c', returnUrl: 'acme://vezmo' }),
     ).rejects.toMatchObject({ code: 'config', reason: 'return_url_not_registered' });
     await expect(
       api(
         fail(400, { errors: [{ code: 'method_unavailable', message: 'This way to pay is not available.' }] }),
-      ).subscriptionPay('t', { confirmationToken: 'c' }),
+      ).subscriptionPay('t', { paymentMethodId: 'c' }),
     ).rejects.toMatchObject({ code: 'not_available', message: 'This way to pay is not available.' });
     const offline = new VezmoApi(
       'https://api.test/v1',

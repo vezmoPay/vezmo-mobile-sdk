@@ -3,7 +3,7 @@ package com.vezmo.reactnative
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.uimanager.events.Event
 
-/** Any of the methods view's events (`topLoaded`, `topConfirmationToken`, …) with its payload. */
+/** Any of the methods view's events (`topLoaded`, `topPaymentMethod`, …) with its payload. */
 class VezmoElementEvent(
   surfaceId: Int,
   viewId: Int,

@@ -1,14 +1,14 @@
 import Foundation
 import React
-@_spi(ConfirmationTokensPublicPreview) import StripePaymentSheet
+import StripePaymentSheet
 import UIKit
 
 /// The Vezmo methods view on iOS: the processor's native embedded element for the methods with rows of their own
 /// (pay-later, Cash App…), configured from JSON that the JS layer builds and confirmed through Vezmo's server. Cards
 /// and wallets are the card flow's (`VezmoCardFlowHost`); with no other method the element is left out.
 ///
-/// Payment flow: the buyer picks a method and taps Pay → `confirm()` → the element creates a confirmation token and
-/// calls our handler → we hand the token's id to JS (`confirmationToken`) → JS sends it to Vezmo's API, which prices
+/// Payment flow: the buyer picks a method and taps Pay → `confirm()` → the element creates a payment method and calls
+/// our handler → we hand its id to JS (`paymentMethod`) → JS sends it to Vezmo's API, which prices
 /// and confirms the payment → JS answers with the intent's client secret (`resolveConfirmation`) → the element
 /// finishes any step left (3D Secure, a wallet, a provider) and reports `confirmResult`.
 @objc(VezmoMethodsHost)
@@ -166,8 +166,9 @@ public final class VezmoMethodsHost: UIView, EmbeddedPaymentElementDelegate {
     embeddedPaymentElementDidUpdatePaymentOption(embeddedPaymentElement: created)
   }
 
-  /// What is charged, for the element or the card flow: a confirmation token goes to `secret`, which answers with the
-  /// intent's client secret from Vezmo's server.
+  /// What is charged, for the element or the card flow: the payment method's id (`pm_…`) goes to `secret`, which
+  /// answers with the intent's client secret from Vezmo's server. A payment method, not a confirmation token: our server
+  /// confirms every intent itself (manual confirmation), which refuses a token made on the device.
   static func intentConfiguration(
     from intent: [String: Any],
     types: [String],
@@ -193,16 +194,16 @@ public final class VezmoMethodsHost: UIView, EmbeddedPaymentElementDelegate {
       mode: mode,
       paymentMethodTypes: types,
       onBehalfOf: nil,
-      confirmationTokenConfirmHandler: { confirmationToken in
-        try await secret(confirmationToken.stripeId)
+      confirmHandler: { paymentMethod, _ in
+        try await secret(paymentMethod.stripeId)
       }
     )
   }
 
   private func intentConfiguration(from intent: [String: Any], types: [String]) -> PaymentSheet.IntentConfiguration {
-    Self.intentConfiguration(from: intent, types: types) { [weak self] tokenId in
+    Self.intentConfiguration(from: intent, types: types) { [weak self] paymentMethodId in
       guard let self else { throw VezmoElementError(message: "") }
-      return try await self.clientSecret(forToken: tokenId)
+      return try await self.clientSecret(forPaymentMethod: paymentMethodId)
     }
   }
 
@@ -275,15 +276,15 @@ public final class VezmoMethodsHost: UIView, EmbeddedPaymentElementDelegate {
     return appearance
   }
 
-  // MARK: Confirmation token → Vezmo → client secret
+  // MARK: Payment method → Vezmo → client secret
 
-  private func clientSecret(forToken tokenId: String) async throws -> String {
+  private func clientSecret(forPaymentMethod paymentMethodId: String) async throws -> String {
     try await withCheckedThrowingContinuation { continuation in
       DispatchQueue.main.async {
         // A confirm still waiting is superseded by this one.
         self.pendingSecret?.resume(throwing: VezmoElementError(message: ""))
         self.pendingSecret = continuation
-        self.emit("confirmationToken", ["id": tokenId])
+        self.emit("paymentMethod", ["id": paymentMethodId])
       }
     }
   }

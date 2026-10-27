@@ -31,8 +31,11 @@ export interface NativeProps extends ViewProps {
   onBankChange?: CodegenTypes.DirectEventHandler<Readonly<{ available: boolean; label: string }>>;
   /** A wallet button was tapped ("apple_pay", "google_pay"): the payment has started. */
   onWalletTap?: CodegenTypes.DirectEventHandler<Readonly<{ wallet: string }>>;
-  /** The buyer confirmed: here is the confirmation token for our server to price and confirm. */
-  onConfirmationToken?: CodegenTypes.DirectEventHandler<Readonly<{ id: string }>>;
+  /**
+   * The buyer confirmed: here is the payment method's id (`pm_…`) for our server to price and confirm, and (Android) the
+   * payment engine's own return link for a method that leaves the app ('' otherwise).
+   */
+  onPaymentMethod?: CodegenTypes.DirectEventHandler<Readonly<{ id: string; returnUrl: string }>>;
   /** `completed`, `canceled` or `failed` (with `message`). */
   onConfirmResult?: CodegenTypes.DirectEventHandler<Readonly<{ status: string; message: string }>>;
 }
@@ -46,7 +49,7 @@ interface NativeCommands {
   presentBank: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
   /** Pay with the bank account the bank step linked. The outcome arrives in `onConfirmResult`. */
   confirmBank: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
-  /** Answer `onConfirmationToken`: the intent's client secret, or an error message to show. */
+  /** Answer `onPaymentMethod`: the intent's client secret, or an error message to show. */
   resolveConfirmation: (
     viewRef: React.ElementRef<HostComponent<NativeProps>>,
     clientSecret: string,

@@ -153,7 +153,7 @@ void main() {
             'fontFamily': 'inter',
           },
           'apiBase': 'https://api.example.test/api/v1',
-          'sdk': 'flutter/0.1.0',
+          'sdk': 'flutter/0.2.0',
         },
         'clientToken': 'tok_1',
         'subscriptionToken': null,

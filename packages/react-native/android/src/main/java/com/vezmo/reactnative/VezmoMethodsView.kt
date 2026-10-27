@@ -29,6 +29,7 @@ import com.facebook.react.uimanager.UIManagerHelper
 import com.stripe.android.PaymentConfiguration
 import com.stripe.android.paymentelement.EmbeddedPaymentElement
 import com.stripe.android.paymentelement.rememberEmbeddedPaymentElement
+import com.stripe.android.paymentsheet.CreateIntentCallback
 import com.stripe.android.paymentsheet.CreateIntentResult
 import com.stripe.android.paymentsheet.PaymentSheet
 import kotlinx.coroutines.CompletableDeferred
@@ -41,8 +42,8 @@ import org.json.JSONObject
  * of their own (pay-later, Cash App…), configured from JSON the JS layer builds and confirmed through Vezmo's server.
  * Cards and wallets are the card flow's ([VezmoCardFlowView]); with no other method the element is left unconfigured.
  *
- * Payment flow: the buyer picks a method and taps Pay → [confirm] → the element creates a confirmation token and
- * calls our callback → we hand its id to JS (`onConfirmationToken`) → JS sends it to Vezmo's API, which prices and
+ * Payment flow: the buyer picks a method and taps Pay → [confirm] → the element creates a payment method and calls
+ * our callback → we hand its id to JS (`onPaymentMethod`) → JS sends it to Vezmo's API, which prices and
  * confirms the payment → JS answers with the intent's client secret ([resolveConfirmation]) → the element finishes
  * any step left (3D Secure, Google Pay, a provider) and reports `onConfirmResult`.
  *
@@ -211,7 +212,9 @@ class VezmoMethodsView(
     val builder =
       remember {
         EmbeddedPaymentElement.Builder(
-          createIntentCallback = { confirmationToken -> awaitClientSecret(confirmationToken.id) },
+          createIntentCallback = CreateIntentCallback { paymentMethod, _ ->
+            awaitClientSecret(paymentMethod.id.orEmpty(), engineReturnUrl(paymentMethod.type?.code, context.packageName))
+          },
           resultCallback = { result -> emitResult(result) },
         )
       }
@@ -289,13 +292,19 @@ class VezmoMethodsView(
     }
   }
 
-  private suspend fun awaitClientSecret(tokenId: String): CreateIntentResult {
+  private suspend fun awaitClientSecret(paymentMethodId: String, returnUrl: String?): CreateIntentResult {
     val deferred = CompletableDeferred<CreateIntentResult>()
     post {
       // A confirm still waiting is superseded by this one.
       pendingSecret?.complete(CreateIntentResult.Failure(cause = Exception("superseded"), displayMessage = DEFAULT_ERROR))
       pendingSecret = deferred
-      emit("topConfirmationToken", Arguments.createMap().apply { putString("id", tokenId) })
+      emit(
+        "topPaymentMethod",
+        Arguments.createMap().apply {
+          putString("id", paymentMethodId)
+          putString("returnUrl", returnUrl.orEmpty())
+        },
+      )
     }
     return deferred.await()
   }

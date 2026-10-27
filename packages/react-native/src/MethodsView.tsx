@@ -5,7 +5,7 @@ import NativeElement, { Commands } from './VezmoMethodsViewNativeComponent';
 export interface MethodsViewHandle {
   /** Pay with the selected method. The outcome arrives in `onConfirmResult`. */
   confirm(): void;
-  /** Answer `onConfirmationToken` with the intent's client secret, or an error message to show. */
+  /** Answer `onPaymentMethod` with the intent's client secret, or an error message to show. */
   resolveConfirmation(clientSecret: string | null, errorMessage?: string): void;
   /** Unselect the element's method. */
   clearSelection(): void;
@@ -18,7 +18,7 @@ export interface MethodsViewProps {
   onLoaded?: () => void;
   onLoadFailed?: (message: string) => void;
   onPaymentOptionChange?: (option: { paymentMethodType: string; label: string } | null) => void;
-  onConfirmationToken: (id: string) => void;
+  onPaymentMethod: (id: string, engineReturnUrl: string | null) => void;
   onConfirmResult: (status: 'completed' | 'canceled' | 'failed', message: string) => void;
 }
 
@@ -52,7 +52,7 @@ export const MethodsView = forwardRef<MethodsViewHandle, MethodsViewProps>(
         onPaymentOptionChange={(e) =>
           props.onPaymentOptionChange?.(e.nativeEvent.paymentMethodType ? { ...e.nativeEvent } : null)
         }
-        onConfirmationToken={(e) => props.onConfirmationToken(e.nativeEvent.id)}
+        onPaymentMethod={(e) => props.onPaymentMethod(e.nativeEvent.id, e.nativeEvent.returnUrl || null)}
         onConfirmResult={(e) =>
           props.onConfirmResult(
             e.nativeEvent.status as 'completed' | 'canceled' | 'failed',
