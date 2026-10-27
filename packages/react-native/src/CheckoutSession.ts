@@ -94,7 +94,7 @@ const NOT_COMPLETED = 'Your payment couldn’t be completed. Please try again.';
 
 /**
  * One checkout, from the session's client token (or a subscription checkout's token) to a result. The money decisions
- * are the server's: this only moves the buyer's confirmation token to Vezmo and the answer back to the element.
+ * are the server's: this only moves the buyer's payment method to Vezmo and the answer back to the element.
  */
 export class CheckoutSession {
   private snapshot: SessionSnapshot = {
@@ -404,11 +404,11 @@ export class CheckoutSession {
     return this.confirmVia === 'card' ? this.cardFlow : this.element;
   }
 
-  /** The element made a confirmation token: Vezmo prices and confirms the payment with it. */
-  async onConfirmationToken(id: string) {
+  /** The element made a payment method (`pm_…`): Vezmo prices and confirms the payment with it. */
+  async onPaymentMethod(id: string) {
     const charge = this.snapshot.charge;
     try {
-      const body = { confirmationToken: id, localOffer: charge?.localOffer ?? null, returnUrl: this.returnUrl };
+      const body = { paymentMethodId: id, localOffer: charge?.localOffer ?? null, returnUrl: this.returnUrl };
       const res =
         this.kind === 'subscription'
           ? payFromSubscription(await this.api.subscriptionPay(this.token, body))

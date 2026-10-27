@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (unreleased)
 
+- **A payment method, not a confirmation token**: every payment, subscription and free trial now sends Vezmo the
+  payment method the buyer chose (`paymentMethodId`, `pm_…`) instead of a confirmation token, on iPhone and Android.
+  Vezmo's server confirms every card payment itself, and only a payment method can be confirmed that way. 3D Secure,
+  Apple Pay, Google Pay and the buyer's own currency work as before; nothing changes in your app. Apps on 0.1.x keep
+  working for now: update to 0.2.0.
 - **Instant ACH**: buyers pay from a US bank account. When the business offers it, the sheet has an Instant ACH row
   (US dollars only, never in the buyer's own currency) that opens a secure bank-connection step; the payment confirms
   at once and the receipt reads "Paid with Instant ACH". Subscriptions save the bank account for the renewals; a free

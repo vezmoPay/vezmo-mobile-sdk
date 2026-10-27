@@ -176,9 +176,9 @@ describe('subscriptions in the sheet', () => {
     });
     t.session.pay();
     expect(t.cardFlow.confirmCard).toHaveBeenCalled();
-    await t.session.onConfirmationToken('ctoken_1');
+    await t.session.onPaymentMethod('pm_1');
     expect(t.api.subscriptionPay).toHaveBeenCalledWith('subtok', {
-      confirmationToken: 'ctoken_1',
+      paymentMethodId: 'pm_1',
       localOffer: null,
       returnUrl: 'acme://vezmo',
     });
@@ -209,7 +209,7 @@ describe('subscriptions in the sheet', () => {
     });
     t.api.subscriptionConfirm.mockResolvedValue({ status: 'active', subscriptionRef: 'SUB-1', paymentId: 'pay_9', transactionId: 'VT9' });
     t.session.pay();
-    await t.session.onConfirmationToken('ctoken_1');
+    await t.session.onPaymentMethod('pm_1');
     expect(t.cardFlow.resolveConfirmation).toHaveBeenCalledWith('pi_9_secret_b', undefined);
     await t.session.onConfirmResult('completed', '');
     expect(t.api.subscriptionConfirm).toHaveBeenCalledWith('subtok', 'pi_9');

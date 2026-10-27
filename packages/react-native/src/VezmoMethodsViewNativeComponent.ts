@@ -23,8 +23,8 @@ export interface NativeProps extends ViewProps {
   onPaymentOptionChange?: CodegenTypes.DirectEventHandler<
     Readonly<{ paymentMethodType: string; label: string }>
   >;
-  /** The buyer confirmed: here is the confirmation token for our server to price and confirm. */
-  onConfirmationToken?: CodegenTypes.DirectEventHandler<Readonly<{ id: string }>>;
+  /** The buyer confirmed: here is the payment method's id (`pm_…`) for our server to price and confirm. */
+  onPaymentMethod?: CodegenTypes.DirectEventHandler<Readonly<{ id: string }>>;
   /** `completed`, `canceled` or `failed` (with `message`). */
   onConfirmResult?: CodegenTypes.DirectEventHandler<Readonly<{ status: string; message: string }>>;
 }
@@ -32,7 +32,7 @@ export interface NativeProps extends ViewProps {
 interface NativeCommands {
   /** Pay with the selected method (opens 3D Secure, a wallet or a provider when needed). */
   confirm: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
-  /** Answer `onConfirmationToken`: the intent's client secret, or an error message to show. */
+  /** Answer `onPaymentMethod`: the intent's client secret, or an error message to show. */
   resolveConfirmation: (
     viewRef: React.ElementRef<HostComponent<NativeProps>>,
     clientSecret: string,

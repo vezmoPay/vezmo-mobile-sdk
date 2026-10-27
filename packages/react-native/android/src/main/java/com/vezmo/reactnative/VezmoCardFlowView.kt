@@ -34,9 +34,9 @@ import com.facebook.react.bridge.WritableMap
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.UIManagerHelper
 import com.stripe.android.PaymentConfiguration
-import com.stripe.android.paymentelement.CreateIntentWithConfirmationTokenCallback
 import com.stripe.android.paymentelement.WalletButtonsPreview
 import com.stripe.android.paymentelement.WalletButtonsViewClickHandler
+import com.stripe.android.paymentsheet.CreateIntentCallback
 import com.stripe.android.paymentsheet.CreateIntentResult
 import com.stripe.android.paymentsheet.PaymentSheet
 import com.stripe.android.paymentsheet.PaymentSheetResult
@@ -267,7 +267,7 @@ class VezmoCardFlowView(
             resultCallback = { result -> emitResult(result) },
             paymentOptionResultCallback = { result -> emitCardOption(result.paymentOption) },
           ).createIntentCallback(
-            CreateIntentWithConfirmationTokenCallback { confirmationToken -> awaitClientSecret(confirmationToken.id) },
+            CreateIntentCallback { paymentMethod, _ -> awaitClientSecret(paymentMethod.id.orEmpty()) },
           )
       }
     val walletBuilder =
@@ -277,7 +277,7 @@ class VezmoCardFlowView(
             resultCallback = { result -> emitResult(result) },
             paymentOptionResultCallback = { },
           ).createIntentCallback(
-            CreateIntentWithConfirmationTokenCallback { confirmationToken -> awaitClientSecret(confirmationToken.id) },
+            CreateIntentCallback { paymentMethod, _ -> awaitClientSecret(paymentMethod.id.orEmpty()) },
           )
       }
     val bankBuilder =
@@ -287,7 +287,7 @@ class VezmoCardFlowView(
             resultCallback = { result -> emitResult(result) },
             paymentOptionResultCallback = { result -> emitBank(result.paymentOption) },
           ).createIntentCallback(
-            CreateIntentWithConfirmationTokenCallback { confirmationToken -> awaitClientSecret(confirmationToken.id) },
+            CreateIntentCallback { paymentMethod, _ -> awaitClientSecret(paymentMethod.id.orEmpty()) },
           )
       }
     val clickHandler =
@@ -558,13 +558,13 @@ class VezmoCardFlowView(
       null
     }
 
-  private suspend fun awaitClientSecret(tokenId: String): CreateIntentResult {
+  private suspend fun awaitClientSecret(paymentMethodId: String): CreateIntentResult {
     val deferred = CompletableDeferred<CreateIntentResult>()
     post {
       // A confirm still waiting is superseded by this one.
       pendingSecret?.complete(CreateIntentResult.Failure(cause = Exception("superseded"), displayMessage = DEFAULT_ERROR))
       pendingSecret = deferred
-      emit("topConfirmationToken", Arguments.createMap().apply { putString("id", tokenId) })
+      emit("topPaymentMethod", Arguments.createMap().apply { putString("id", paymentMethodId) })
     }
     return deferred.await()
   }

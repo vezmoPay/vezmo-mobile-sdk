@@ -63,8 +63,8 @@ static std::string VZString(id value)
   } else if ([name isEqualToString:@"paymentOption"]) {
     emitter->onPaymentOptionChange(
         {.paymentMethodType = VZString(body[@"paymentMethodType"]), .label = VZString(body[@"label"])});
-  } else if ([name isEqualToString:@"confirmationToken"]) {
-    emitter->onConfirmationToken({.id = VZString(body[@"id"])});
+  } else if ([name isEqualToString:@"paymentMethod"]) {
+    emitter->onPaymentMethod({.id = VZString(body[@"id"])});
   } else if ([name isEqualToString:@"confirmResult"]) {
     emitter->onConfirmResult({.status = VZString(body[@"status"]), .message = VZString(body[@"message"])});
   }

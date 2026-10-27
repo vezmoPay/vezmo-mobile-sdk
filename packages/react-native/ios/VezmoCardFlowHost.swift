@@ -1,7 +1,7 @@
 import Foundation
 import PassKit
 import React
-@_spi(STP) @_spi(ConfirmationTokensPublicPreview) import StripePaymentSheet
+@_spi(STP) import StripePaymentSheet
 import StripeCore
 import SwiftUI
 import UIKit
@@ -341,9 +341,9 @@ public final class VezmoCardFlowHost: UIView {
   }
 
   private func intentConfiguration(from intent: [String: Any], types: [String] = ["card"]) -> PaymentSheet.IntentConfiguration {
-    VezmoMethodsHost.intentConfiguration(from: intent, types: types) { [weak self] tokenId in
+    VezmoMethodsHost.intentConfiguration(from: intent, types: types) { [weak self] paymentMethodId in
       guard let self else { throw VezmoElementError(message: "") }
-      return try await self.clientSecret(forToken: tokenId)
+      return try await self.clientSecret(forPaymentMethod: paymentMethodId)
     }
   }
 
@@ -515,15 +515,15 @@ public final class VezmoCardFlowHost: UIView {
     }
   }
 
-  // MARK: Confirmation token → Vezmo → client secret
+  // MARK: Payment method → Vezmo → client secret
 
-  private func clientSecret(forToken tokenId: String) async throws -> String {
+  private func clientSecret(forPaymentMethod paymentMethodId: String) async throws -> String {
     try await withCheckedThrowingContinuation { continuation in
       DispatchQueue.main.async {
         // A confirm still waiting is superseded by this one.
         self.pendingSecret?.resume(throwing: VezmoElementError(message: ""))
         self.pendingSecret = continuation
-        self.emit("confirmationToken", ["id": tokenId])
+        self.emit("paymentMethod", ["id": paymentMethodId])
       }
     }
   }

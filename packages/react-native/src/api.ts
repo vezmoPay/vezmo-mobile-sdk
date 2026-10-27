@@ -103,10 +103,10 @@ export class VezmoApi {
 
   pay(
     token: string,
-    body: { confirmationToken: string; localOffer?: string | null; returnUrl?: string | null },
+    body: { paymentMethodId: string; localOffer?: string | null; returnUrl?: string | null },
   ) {
     return this.call<PayResponse>('POST', `/secure-payments/${encodeURIComponent(token)}/pay`, {
-      confirmationToken: body.confirmationToken,
+      paymentMethodId: body.paymentMethodId,
       integration: this.integration,
       ...(body.localOffer ? { localOffer: body.localOffer } : {}),
       ...this.returnLink(body.returnUrl),
@@ -162,8 +162,10 @@ export class VezmoApi {
 
   /**
    * Where a bank app or pay-later provider sends the buyer back. iOS: the app's own link (the sheet hands it to the
-   * payment). Android: none, so the confirmation token's own link is used — the payment engine's return into the app;
-   * the app's link there would open the app but leave the payment waiting.
+   * payment). Android: none, as in 0.1.x (a card, 3D Secure included, and Google Pay need none); the app's link there
+   * would open the app but leave the payment waiting.
+   * TODO(0.2.0, before release): bank apps and pay-later providers on Android need the payment engine's own return
+   * link, which a confirmation token carried and a payment method doesn't; send it once Vezmo's API accepts it.
    */
   private returnLink(returnUrl?: string | null) {
     return returnUrl && this.integration === 'ios' ? { returnUrl } : {};
@@ -186,10 +188,10 @@ export class VezmoApi {
     }
   }
 
-  /** Subscribe: our server confirms the first payment, or a free trial's card, with the confirmation token. */
-  subscriptionPay(token: string, body: { confirmationToken: string; localOffer?: string | null; returnUrl?: string | null }) {
+  /** Subscribe: our server confirms the first payment, or a free trial's card, with the payment method (`pm_…`). */
+  subscriptionPay(token: string, body: { paymentMethodId: string; localOffer?: string | null; returnUrl?: string | null }) {
     return this.call<SubscriptionPayResponse>('POST', `/subscription-checkout/${encodeURIComponent(token)}/pay`, {
-      confirmationToken: body.confirmationToken,
+      paymentMethodId: body.paymentMethodId,
       integration: this.integration,
       ...(body.localOffer ? { localOffer: body.localOffer } : {}),
       ...this.returnLink(body.returnUrl),
