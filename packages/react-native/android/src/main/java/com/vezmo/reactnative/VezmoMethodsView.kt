@@ -212,7 +212,9 @@ class VezmoMethodsView(
     val builder =
       remember {
         EmbeddedPaymentElement.Builder(
-          createIntentCallback = CreateIntentCallback { paymentMethod, _ -> awaitClientSecret(paymentMethod.id.orEmpty()) },
+          createIntentCallback = CreateIntentCallback { paymentMethod, _ ->
+            awaitClientSecret(paymentMethod.id.orEmpty(), engineReturnUrl(paymentMethod.type?.code, context.packageName))
+          },
           resultCallback = { result -> emitResult(result) },
         )
       }
@@ -290,13 +292,19 @@ class VezmoMethodsView(
     }
   }
 
-  private suspend fun awaitClientSecret(paymentMethodId: String): CreateIntentResult {
+  private suspend fun awaitClientSecret(paymentMethodId: String, returnUrl: String?): CreateIntentResult {
     val deferred = CompletableDeferred<CreateIntentResult>()
     post {
       // A confirm still waiting is superseded by this one.
       pendingSecret?.complete(CreateIntentResult.Failure(cause = Exception("superseded"), displayMessage = DEFAULT_ERROR))
       pendingSecret = deferred
-      emit("topPaymentMethod", Arguments.createMap().apply { putString("id", paymentMethodId) })
+      emit(
+        "topPaymentMethod",
+        Arguments.createMap().apply {
+          putString("id", paymentMethodId)
+          putString("returnUrl", returnUrl.orEmpty())
+        },
+      )
     }
     return deferred.await()
   }

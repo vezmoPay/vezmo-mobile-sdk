@@ -18,6 +18,9 @@
 The same SDK as 0.1.0, published again: 0.1.0 was removed from npm by mistake on 24 Oct 2026, and npm never lets a
 removed version number be used again. Nothing changes in your app; update with `npm install @vezmopay/react-native@0.1.1`.
 
+- **Android: Cash App and pay-later methods need your app registered**: the sheet now sends Vezmo its own way back
+  into the sheet for a method that leaves the app, and Vezmo takes it only for an Android app added under
+  **Developers → Mobile apps** with its package name. Cards, Google Pay and Instant ACH work without it.
 - **New repository address**: the source moved to `github.com/vezmoPay/vezmo-mobile-sdk` (the old
   `ACCEPT-GLOBAL-LIMITED` address redirects). Package metadata and links point to it.
 

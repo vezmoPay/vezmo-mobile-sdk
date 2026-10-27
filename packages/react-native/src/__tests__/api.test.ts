@@ -12,18 +12,27 @@ describe('VezmoApi', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(ok({ state: 'processing', paymentId: 'p', clientSecret: null }));
     const api = new VezmoApi('https://api.test/v1', 'android', fetchImpl);
-    const res = await api.pay('tok/1', { paymentMethodId: 'pm_1', localOffer: 'o', returnUrl: 'acme://vezmo' });
+    const res = await api.pay('tok/1', {
+      paymentMethodId: 'pm_1',
+      localOffer: 'o',
+      returnUrl: 'acme://vezmo',
+      engineReturnUrl: 'stripesdk://payment_return_url/com.acme.shop',
+    });
     expect(res.state).toBe('processing');
     const [url, init] = fetchImpl.mock.calls[0]!;
     expect(url).toBe('https://api.test/v1/secure-payments/tok%2F1/pay');
     expect(init?.method).toBe('POST');
     expect((init?.headers as Record<string, string>)['Vezmo-SDK']).toMatch(/^react-native\/\d+\.\d+\.\d+/);
-    // A payment method, never a confirmation token; no return link from Android (as in 0.1.x: see returnLink).
+    // A payment method, never a confirmation token. Android: the engine's own way back, never the app's link.
     expect(JSON.parse(init?.body as string)).toEqual({
       paymentMethodId: 'pm_1',
       integration: 'android',
       localOffer: 'o',
+      returnUrl: 'stripesdk://payment_return_url/com.acme.shop',
     });
+    // A card on Android: no return link at all.
+    await api.pay('t', { paymentMethodId: 'pm_2', returnUrl: 'acme://vezmo', engineReturnUrl: null });
+    expect(JSON.parse(fetchImpl.mock.calls[1]![1]?.body as string)).toEqual({ paymentMethodId: 'pm_2', integration: 'android' });
   });
 
   it("sends the app's return link from iOS, where the sheet hands it to the payment", async () => {

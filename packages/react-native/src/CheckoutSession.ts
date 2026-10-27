@@ -93,6 +93,20 @@ const PRICE_CHANGED = 'The price in your currency just changed. Check the new am
 const NOT_COMPLETED = 'Your payment couldn’t be completed. Please try again.';
 
 /**
+ * Our server's confirm after the buyer's step (3D Secure, a redirect). It confirms a card that waits for it after 3D
+ * Secure (manual confirmation), so the bank's decline comes back here: rethrown. Anything else (offline, a step still
+ * running) is null: the webhook records the payment and the status says how it stands.
+ */
+async function declineOnly<T>(call: () => Promise<T>): Promise<T | null> {
+  try {
+    return await call();
+  } catch (e) {
+    if (e instanceof VezmoApiError && e.code === 'declined' && e.reason !== 'requires_action') throw e;
+    return null;
+  }
+}
+
+/**
  * One checkout, from the session's client token (or a subscription checkout's token) to a result. The money decisions
  * are the server's: this only moves the buyer's payment method to Vezmo and the answer back to the element.
  */
@@ -404,11 +418,19 @@ export class CheckoutSession {
     return this.confirmVia === 'card' ? this.cardFlow : this.element;
   }
 
-  /** The element made a payment method (`pm_…`): Vezmo prices and confirms the payment with it. */
-  async onPaymentMethod(id: string) {
+  /**
+   * The element made a payment method (`pm_…`): Vezmo prices and confirms the payment with it. `engineReturnUrl`
+   * (Android): the payment engine's own way back into the sheet, for a method that leaves the app.
+   */
+  async onPaymentMethod(id: string, engineReturnUrl: string | null = null) {
     const charge = this.snapshot.charge;
     try {
-      const body = { paymentMethodId: id, localOffer: charge?.localOffer ?? null, returnUrl: this.returnUrl };
+      const body = {
+        paymentMethodId: id,
+        localOffer: charge?.localOffer ?? null,
+        returnUrl: this.returnUrl,
+        engineReturnUrl,
+      };
       const res =
         this.kind === 'subscription'
           ? payFromSubscription(await this.api.subscriptionPay(this.token, body))
@@ -477,14 +499,22 @@ export class CheckoutSession {
       return;
     }
     const intentId = intentIdOf(this.lastPay?.clientSecret);
-    if (this.kind === 'subscription') {
-      this.set({ phase: { name: 'done', result: await this.startedSubscription(intentId) } });
-      return;
-    }
     try {
-      if (intentId) await this.api.confirm(this.token, intentId);
-    } catch {
-      /* the webhook records it either way; the status below is the answer */
+      if (this.kind === 'subscription') {
+        const confirmed = intentId
+          ? await declineOnly(() => this.api.subscriptionConfirm(this.token, intentId))
+          : null;
+        const result = confirmed ? resultFromSubscriptionConfirm(confirmed) : this.startedSubscription();
+        this.set({ phase: { name: 'done', result } });
+        return;
+      }
+      // The webhook records it either way; the status below is the answer.
+      if (intentId) await declineOnly(() => this.api.confirm(this.token, intentId));
+    } catch (e) {
+      // Our server confirmed the card after 3D Secure and the bank said no: its reason in Vezmo's words, and the sheet
+      // stays open for another card.
+      this.set({ phase: { name: 'ready', error: (e as VezmoApiError).toVezmoError() } });
+      return;
     }
     this.set({ phase: { name: 'done', result: await this.settledResult() } });
   }
@@ -523,14 +553,12 @@ export class CheckoutSession {
     }
   }
 
-  /** A subscription started on the device (after 3D Secure): Vezmo records it and says how it stands. */
-  private async startedSubscription(intentId: string | null): Promise<CheckoutResult> {
+  /**
+   * A subscription started on the device (after 3D Secure) that Vezmo's confirm couldn't answer for now: recorded from
+   * the processor's notice instead; the merchant's webhook tells them.
+   */
+  private startedSubscription(): CheckoutResult {
     const ref = this.snapshot.config?.subscription?.ref ?? '';
-    try {
-      if (intentId) return resultFromSubscriptionConfirm(await this.api.subscriptionConfirm(this.token, intentId));
-    } catch {
-      /* recorded from the processor's notice instead; the merchant's webhook tells them */
-    }
     return { status: 'processing', paymentId: null, subscription: { ref, status: 'incomplete' } };
   }
 

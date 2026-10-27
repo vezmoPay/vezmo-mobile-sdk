@@ -18,7 +18,7 @@ export interface MethodsViewProps {
   onLoaded?: () => void;
   onLoadFailed?: (message: string) => void;
   onPaymentOptionChange?: (option: { paymentMethodType: string; label: string } | null) => void;
-  onPaymentMethod: (id: string) => void;
+  onPaymentMethod: (id: string, engineReturnUrl: string | null) => void;
   onConfirmResult: (status: 'completed' | 'canceled' | 'failed', message: string) => void;
 }
 
@@ -52,7 +52,7 @@ export const MethodsView = forwardRef<MethodsViewHandle, MethodsViewProps>(
         onPaymentOptionChange={(e) =>
           props.onPaymentOptionChange?.(e.nativeEvent.paymentMethodType ? { ...e.nativeEvent } : null)
         }
-        onPaymentMethod={(e) => props.onPaymentMethod(e.nativeEvent.id)}
+        onPaymentMethod={(e) => props.onPaymentMethod(e.nativeEvent.id, e.nativeEvent.returnUrl || null)}
         onConfirmResult={(e) =>
           props.onConfirmResult(
             e.nativeEvent.status as 'completed' | 'canceled' | 'failed',

@@ -9,7 +9,8 @@ Your server keeps your Vezmo API key. The app only ever receives a session's cli
 
 - Android 7.0 (API 24) or later. Compile with SDK 36, Kotlin 2.1 or later, Java 17.
 - Your activity is a `ComponentActivity` (`AppCompatActivity` and `FragmentActivity` are).
-- Your app added in the Vezmo dashboard under **Developers → Mobile apps**.
+- Your app added in the Vezmo dashboard under **Developers → Mobile apps** as an Android app, with its package name
+  (`applicationId`). Cash App and the pay-later methods bring the buyer back to the sheet only for a registered package.
 
 ## Install
 

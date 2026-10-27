@@ -90,7 +90,7 @@ class VezmoCheckout internal constructor(
         // The settings as they are now, for this session and the sheet that shows it.
         val config = configuration
         val api = VezmoApi(config.apiBase ?: DEFAULT_API_BASE, sdk = config.sdk ?: DEFAULT_SDK)
-        val session = CheckoutSession(api, token, config.returnUrl, subscription = subscription)
+        val session = CheckoutSession(api, token, subscription = subscription)
         session.load()
         val phase = session.state.value.phase
         if (phase is SessionPhase.Closed && phase.result is CheckoutResult.Failed) {

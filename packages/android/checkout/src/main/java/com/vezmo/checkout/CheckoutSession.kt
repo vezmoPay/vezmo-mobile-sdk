@@ -112,7 +112,6 @@ internal const val INSTANT_ACH = "Instant ACH"
 internal class CheckoutSession(
     private val api: CheckoutApi,
     val token: String,
-    private val returnUrl: String?,
     dispatcher: CoroutineDispatcher = Dispatchers.Main.immediate,
     /** The token is a subscription checkout's: cards and Google Pay; a first payment or a free trial. */
     val subscription: Boolean = false,
@@ -422,14 +421,17 @@ internal class CheckoutSession(
         if (confirmViaCard) cardFlow?.resolveConfirmation(clientSecret, errorMessage) else element?.resolveConfirmation(clientSecret, errorMessage)
     }
 
-    /** The engine made a payment method (`pm_…`): Vezmo prices and confirms the payment with it. */
-    suspend fun onPaymentMethod(id: String) {
+    /**
+     * The engine made a payment method (`pm_…`): Vezmo prices and confirms the payment with it. [engineReturnUrl]: the
+     * engine's own way back into the sheet, for a method that leaves the app (see [engineReturnUrl]).
+     */
+    suspend fun onPaymentMethod(id: String, engineReturnUrl: String? = null) {
         val charge = snapshot.charge
         try {
             val res = if (subscription) {
                 api.subscriptionPay(token, id, charge?.localOffer)
             } else {
-                api.pay(token, id, charge?.localOffer, returnUrl)
+                api.pay(token, id, charge?.localOffer, engineReturnUrl)
             }
             lastPay = res
             res.method?.let { m -> set { copy(paidMethod = m) } }
@@ -492,14 +494,21 @@ internal class CheckoutSession(
                     set { copy(phase = SessionPhase.Done(fromPay)) }
                     return
                 }
-                if (subscription) {
-                    val result = startedSubscription(intentIdOf(lastPay?.clientSecret))
-                    set { copy(phase = SessionPhase.Done(result)) }
-                    return
-                }
-                intentIdOf(lastPay?.clientSecret)?.let { id ->
+                val intentId = intentIdOf(lastPay?.clientSecret)
+                try {
+                    if (subscription) {
+                        val confirmed = intentId?.let { id -> declineOnly { api.subscriptionConfirm(token, id) } }
+                        val result = confirmed ?: startedSubscription()
+                        set { copy(phase = SessionPhase.Done(result)) }
+                        return
+                    }
                     // The webhook records it either way; the status below is the answer.
-                    runCatching { api.confirm(token, id) }
+                    intentId?.let { id -> declineOnly { api.confirm(token, id) } }
+                } catch (declined: VezmoApiError) {
+                    // Our server confirmed the card after 3D Secure and the bank said no: its reason in Vezmo's words,
+                    // and the sheet stays open for another card.
+                    set { copy(phase = SessionPhase.Ready(declined.toVezmoError())) }
+                    return
                 }
                 val result = settledResult()
                 set { copy(phase = SessionPhase.Done(result)) }
@@ -541,15 +550,22 @@ internal class CheckoutSession(
 
     private suspend fun fetchConfig(): CheckoutConfig = if (subscription) api.subscription(token) else api.checkout(token)
 
-    /** A subscription started on the device (after 3D Secure): Vezmo records it and says how it stands. */
-    private suspend fun startedSubscription(intentId: String?): CheckoutResult {
-        if (intentId != null) {
-            try {
-                return api.subscriptionConfirm(token, intentId)
-            } catch (_: VezmoApiError) {
-                // Recorded from the processor's notice instead; the merchant's webhook tells them.
-            }
+    /**
+     * Our server's confirm after the buyer's step (3D Secure, a redirect). It confirms a card that waits for it after
+     * 3D Secure (manual confirmation), so the bank's decline comes back here: rethrown. Anything else (offline, a step
+     * still running) is null: the webhook records the payment and the status says how it stands.
+     */
+    private suspend fun <T> declineOnly(call: suspend () -> T): T? =
+        try {
+            call()
+        } catch (e: VezmoApiError) {
+            if (e.code == VezmoError.Code.Declined && e.reason != "requires_action") throw e
+            null
         }
+
+    /** A subscription started on the device (after 3D Secure) that Vezmo's confirm couldn't answer for now. */
+    private fun startedSubscription(): CheckoutResult {
+        // Recorded from the processor's notice instead; the merchant's webhook tells them.
         val ref = snapshot.config?.subscription?.ref ?: ""
         return CheckoutResult.Processing(null, SubscriptionResult(ref, SubscriptionResult.Status.Incomplete))
     }

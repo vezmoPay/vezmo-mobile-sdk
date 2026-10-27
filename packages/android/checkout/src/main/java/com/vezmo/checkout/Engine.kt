@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import com.stripe.android.PaymentConfiguration
 import com.stripe.android.paymentelement.EmbeddedPaymentElement
 import com.stripe.android.paymentelement.WalletButtonsPreview
@@ -256,8 +257,8 @@ internal class Engine(val session: CheckoutSession) {
             CreateIntentResult.Failure(cause = Exception(message), displayMessage = message)
         }
 
-    /** The engine made a payment method: hand its id to the session and wait for Vezmo's answer. */
-    suspend fun awaitClientSecret(card: Boolean, paymentMethodId: String): CreateIntentResult =
+    /** The engine made a payment method: hand its id (and its return link) to the session and wait for Vezmo's answer. */
+    suspend fun awaitClientSecret(card: Boolean, paymentMethodId: String, returnUrl: String?): CreateIntentResult =
         withContext(Dispatchers.Main.immediate) {
             val deferred = CompletableDeferred<CreateIntentResult>()
             // A confirm still waiting is superseded by this one.
@@ -269,7 +270,7 @@ internal class Engine(val session: CheckoutSession) {
                 elementSecret?.complete(superseded)
                 elementSecret = deferred
             }
-            session.post { session.onPaymentMethod(paymentMethodId) }
+            session.post { session.onPaymentMethod(paymentMethodId, returnUrl) }
             deferred.await()
         }
 
@@ -557,19 +558,24 @@ internal class Engine(val session: CheckoutSession) {
 @Composable
 internal fun rememberEngine(session: CheckoutSession, kept: Engine? = null): Engine {
     val engine = remember(session, kept) { kept ?: Engine(session) }
+    // A method that leaves the app comes back through the engine's own link, with this app's package.
+    val packageName = LocalContext.current.packageName
+    fun pay(card: Boolean) = CreateIntentCallback { pm, _ ->
+        engine.awaitClientSecret(card, pm.id.orEmpty(), engineReturnUrl(pm.type?.code, packageName))
+    }
     val cardBuilder = remember(engine) {
         PaymentSheet.FlowController
             .Builder(
                 resultCallback = { engine.onFlowResult(it) },
                 paymentOptionResultCallback = { engine.reportCard(it.paymentOption) },
-            ).createIntentCallback(CreateIntentCallback { pm, _ -> engine.awaitClientSecret(card = true, pm.id.orEmpty()) })
+            ).createIntentCallback(pay(card = true))
     }
     val walletBuilder = remember(engine) {
         PaymentSheet.FlowController
             .Builder(
                 resultCallback = { engine.onFlowResult(it) },
                 paymentOptionResultCallback = { },
-            ).createIntentCallback(CreateIntentCallback { pm, _ -> engine.awaitClientSecret(card = true, pm.id.orEmpty()) })
+            ).createIntentCallback(pay(card = true))
     }
     // Instant ACH's bank step confirms through the card flow's Vezmo step too.
     val bankBuilder = remember(engine) {
@@ -577,11 +583,11 @@ internal fun rememberEngine(session: CheckoutSession, kept: Engine? = null): Eng
             .Builder(
                 resultCallback = { engine.onFlowResult(it) },
                 paymentOptionResultCallback = { engine.reportBank(it.paymentOption) },
-            ).createIntentCallback(CreateIntentCallback { pm, _ -> engine.awaitClientSecret(card = true, pm.id.orEmpty()) })
+            ).createIntentCallback(pay(card = true))
     }
     val elementBuilder = remember(engine) {
         EmbeddedPaymentElement.Builder(
-            createIntentCallback = CreateIntentCallback { pm, _ -> engine.awaitClientSecret(card = false, pm.id.orEmpty()) },
+            createIntentCallback = pay(card = false),
             resultCallback = { engine.onElementResult(it) },
         )
     }

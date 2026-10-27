@@ -184,6 +184,31 @@ final class CheckoutSessionTests: XCTestCase {
     XCTAssertEqual(snap.phase, .done(.succeeded(paymentId: "pay_1", transactionId: "VT1", subscription: nil)))
   }
 
+  func testADeclineAtOurConfirmAfter3DSecureLeavesTheSheetReadyInOurWords() async {
+    // A card our server confirms (manual confirmation): back from 3D Secure the engine reports completed, and the bank's
+    // answer comes from our confirm step.
+    await start()
+    api.payAnswer = { PayResponse(state: "requires_action", paymentId: "pay_1", clientSecret: "pi_9_secret_b") }
+    api.statusAnswer = SessionStatus(state: "failed", paymentId: "pay_1", transactionId: nil)
+    api.confirmError = VezmoAPIError(.declined, "Payment declined by your bank (issuer).", httpStatus: 400)
+    session.setOption("•••• 0002")
+    session.pay()
+    await session.onPaymentMethod("pm_1")
+    await session.onConfirmResult(.completed, message: "")
+    XCTAssertEqual(api.confirmCalls, [["tok", "pi_9"]])
+    XCTAssertEqual(snap.phase, .ready(error: VezmoError(code: .declined, message: "Payment declined by your bank (issuer).")))
+
+    // A step still running, or no answer: the status says how it stands, as before.
+    await start()
+    api.payAnswer = { PayResponse(state: "requires_action", paymentId: "pay_1", clientSecret: "pi_9_secret_b") }
+    api.confirmError = VezmoAPIError(.declined, "Still verifying.", httpStatus: 400, reason: "requires_action")
+    session.setOption("•••• 4242")
+    session.pay()
+    await session.onPaymentMethod("pm_1")
+    await session.onConfirmResult(.completed, message: "")
+    XCTAssertEqual(snap.phase, .done(.succeeded(paymentId: "pay_1", transactionId: "VT1", subscription: nil)))
+  }
+
   func testADeclineGoesBackToTheElementInOurWordsAndLeavesTheSheetReadyToRetry() async {
     await start()
     api.payAnswer = { throw VezmoAPIError(.declined, "Your bank declined this card.", httpStatus: 400) }

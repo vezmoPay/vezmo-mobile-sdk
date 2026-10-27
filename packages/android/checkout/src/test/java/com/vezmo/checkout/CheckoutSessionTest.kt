@@ -119,7 +119,7 @@ private class Setup(scope: TestScope) {
     val api = FakeApi()
     val element = FakeElement()
     val cardFlow = FakeCardFlow()
-    val session = CheckoutSession(api, "tok", "acme://vezmo/return", UnconfinedTestDispatcher(scope.testScheduler)).also {
+    val session = CheckoutSession(api, "tok", UnconfinedTestDispatcher(scope.testScheduler)).also {
         it.attachElement(element)
         it.attachCardFlow(cardFlow)
     }
@@ -151,10 +151,11 @@ class CheckoutSessionTest {
         t.session.setOption("Klarna")
         t.session.pay()
         assertEquals(1, t.element.confirms)
-        t.session.onPaymentMethod("pm_1")
+        // A method that leaves the app: the engine's own way back into the sheet goes to Vezmo with it.
+        t.session.onPaymentMethod("pm_1", "stripesdk://payment_return_url/com.acme.shop")
         // The receipt's Visa mark and last four come from the server's reading of the payment.
         assertEquals(method, t.snap.paidMethod)
-        assertEquals(listOf("tok", "pm_1", null, "acme://vezmo/return"), t.api.payArgs)
+        assertEquals(listOf("tok", "pm_1", null, "stripesdk://payment_return_url/com.acme.shop"), t.api.payArgs)
         assertEquals(listOf<Pair<String?, String?>>("pi_1_secret_a" to null), t.element.resolved)
         t.session.onConfirmResult(ConfirmStatus.Completed, "")
         assertEquals(SessionPhase.Done(CheckoutResult.Succeeded("pay_1", "VT1")), t.snap.phase)
@@ -220,6 +221,34 @@ class CheckoutSessionTest {
         u.session.onPaymentMethod("pm_1")
         u.session.onConfirmResult(ConfirmStatus.Failed, "engine text")
         assertEquals(SessionPhase.Ready(VezmoError(VezmoError.Code.Declined, "engine text")), u.snap.phase)
+        u.session.dispose()
+    }
+
+    @Test
+    fun `a decline at our confirm after 3D Secure (the engine completed) - the sheet stays ready, in our words`() = test { t ->
+        // A card our server confirms (manual confirmation): back from 3D Secure the engine reports completed, and the
+        // bank's answer comes from our confirm step.
+        t.api.pay = { PayResponse("requires_action", "pay_1", null, "pi_9_secret_b", null) }
+        t.api.status = SessionStatus("failed", "pay_1", null)
+        t.api.confirmError = VezmoApiError(VezmoError.Code.Declined, "Payment declined by your bank (issuer).", 400)
+        t.session.chooseCard()
+        t.session.setCard(CardChoice("•••• 0002", null))
+        t.session.pay()
+        t.session.onPaymentMethod("pm_1")
+        t.session.onConfirmResult(ConfirmStatus.Completed, "")
+        assertTrue("confirm:tok:pi_9" in t.api.calls)
+        assertEquals(SessionPhase.Ready(VezmoError(VezmoError.Code.Declined, "Payment declined by your bank (issuer).")), t.snap.phase)
+
+        // A step still running: the status says how it stands, as before.
+        val u = Setup(this)
+        u.api.pay = { PayResponse("requires_action", "pay_1", null, "pi_9_secret_b", null) }
+        u.api.confirmError = VezmoApiError(VezmoError.Code.Declined, "Still verifying.", 400, "requires_action")
+        u.session.load()
+        u.session.setOption("Klarna")
+        u.session.pay()
+        u.session.onPaymentMethod("pm_1")
+        u.session.onConfirmResult(ConfirmStatus.Completed, "")
+        assertEquals(SessionPhase.Done(CheckoutResult.Succeeded("pay_1", "VT1")), u.snap.phase)
         u.session.dispose()
     }
 

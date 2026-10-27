@@ -50,6 +50,16 @@ type Fetch = typeof fetch;
  * The buyer-side calls of an API checkout session. Everything is scoped by the session's client token; no merchant
  * key ever reaches the app.
  */
+/** What …/pay sends: the payment method, the buyer's own-currency offer and the way back (see `returnLink`). */
+export interface PayBody {
+  paymentMethodId: string;
+  localOffer?: string | null;
+  /** The app's own return link (iOS). */
+  returnUrl?: string | null;
+  /** The payment engine's own return link (Android), for a method that leaves the app. */
+  engineReturnUrl?: string | null;
+}
+
 export class VezmoApi {
   constructor(
     private readonly apiBase: string = DEFAULT_API_BASE,
@@ -103,13 +113,13 @@ export class VezmoApi {
 
   pay(
     token: string,
-    body: { paymentMethodId: string; localOffer?: string | null; returnUrl?: string | null },
+    body: PayBody,
   ) {
     return this.call<PayResponse>('POST', `/secure-payments/${encodeURIComponent(token)}/pay`, {
       paymentMethodId: body.paymentMethodId,
       integration: this.integration,
       ...(body.localOffer ? { localOffer: body.localOffer } : {}),
-      ...this.returnLink(body.returnUrl),
+      ...this.returnLink(body),
     });
   }
 
@@ -162,13 +172,12 @@ export class VezmoApi {
 
   /**
    * Where a bank app or pay-later provider sends the buyer back. iOS: the app's own link (the sheet hands it to the
-   * payment). Android: none, as in 0.1.x (a card, 3D Secure included, and Google Pay need none); the app's link there
-   * would open the app but leave the payment waiting.
-   * TODO(0.2.0, before release): bank apps and pay-later providers on Android need the payment engine's own return
-   * link, which a confirmation token carried and a payment method doesn't; send it once Vezmo's API accepts it.
+   * payment). Android: the payment engine's own link, from the native view, for a method that leaves the app (the
+   * app's link would open the app but leave the payment waiting); none for a card.
    */
-  private returnLink(returnUrl?: string | null) {
-    return returnUrl && this.integration === 'ios' ? { returnUrl } : {};
+  private returnLink(body: PayBody) {
+    const link = this.integration === 'ios' ? body.returnUrl : body.engineReturnUrl;
+    return link ? { returnUrl: link } : {};
   }
 
   // ── subscriptions (a subscription checkout's token) ─────────────────────
@@ -189,12 +198,12 @@ export class VezmoApi {
   }
 
   /** Subscribe: our server confirms the first payment, or a free trial's card, with the payment method (`pm_…`). */
-  subscriptionPay(token: string, body: { paymentMethodId: string; localOffer?: string | null; returnUrl?: string | null }) {
+  subscriptionPay(token: string, body: PayBody) {
     return this.call<SubscriptionPayResponse>('POST', `/subscription-checkout/${encodeURIComponent(token)}/pay`, {
       paymentMethodId: body.paymentMethodId,
       integration: this.integration,
       ...(body.localOffer ? { localOffer: body.localOffer } : {}),
-      ...this.returnLink(body.returnUrl),
+      ...this.returnLink(body),
     });
   }
 

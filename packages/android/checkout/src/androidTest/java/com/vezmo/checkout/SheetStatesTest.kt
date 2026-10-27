@@ -99,7 +99,7 @@ class SheetStatesTest {
         fontScale: Float = 1f,
         drive: suspend CheckoutSession.() -> Unit = { load() },
     ): CheckoutSession {
-        val s = CheckoutSession(api, "tok", "vezmoexample://vezmo", subscription = subscription)
+        val s = CheckoutSession(api, "tok", subscription = subscription)
         session = s
         runBlocking { s.drive() }
         rule.setContent {

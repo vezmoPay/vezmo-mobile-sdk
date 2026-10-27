@@ -267,7 +267,9 @@ class VezmoCardFlowView(
             resultCallback = { result -> emitResult(result) },
             paymentOptionResultCallback = { result -> emitCardOption(result.paymentOption) },
           ).createIntentCallback(
-            CreateIntentCallback { paymentMethod, _ -> awaitClientSecret(paymentMethod.id.orEmpty()) },
+            CreateIntentCallback { paymentMethod, _ ->
+              awaitClientSecret(paymentMethod.id.orEmpty(), engineReturnUrl(paymentMethod.type?.code, context.packageName))
+            },
           )
       }
     val walletBuilder =
@@ -277,7 +279,9 @@ class VezmoCardFlowView(
             resultCallback = { result -> emitResult(result) },
             paymentOptionResultCallback = { },
           ).createIntentCallback(
-            CreateIntentCallback { paymentMethod, _ -> awaitClientSecret(paymentMethod.id.orEmpty()) },
+            CreateIntentCallback { paymentMethod, _ ->
+              awaitClientSecret(paymentMethod.id.orEmpty(), engineReturnUrl(paymentMethod.type?.code, context.packageName))
+            },
           )
       }
     val bankBuilder =
@@ -287,7 +291,9 @@ class VezmoCardFlowView(
             resultCallback = { result -> emitResult(result) },
             paymentOptionResultCallback = { result -> emitBank(result.paymentOption) },
           ).createIntentCallback(
-            CreateIntentCallback { paymentMethod, _ -> awaitClientSecret(paymentMethod.id.orEmpty()) },
+            CreateIntentCallback { paymentMethod, _ ->
+              awaitClientSecret(paymentMethod.id.orEmpty(), engineReturnUrl(paymentMethod.type?.code, context.packageName))
+            },
           )
       }
     val clickHandler =
@@ -558,13 +564,19 @@ class VezmoCardFlowView(
       null
     }
 
-  private suspend fun awaitClientSecret(paymentMethodId: String): CreateIntentResult {
+  private suspend fun awaitClientSecret(paymentMethodId: String, returnUrl: String?): CreateIntentResult {
     val deferred = CompletableDeferred<CreateIntentResult>()
     post {
       // A confirm still waiting is superseded by this one.
       pendingSecret?.complete(CreateIntentResult.Failure(cause = Exception("superseded"), displayMessage = DEFAULT_ERROR))
       pendingSecret = deferred
-      emit("topPaymentMethod", Arguments.createMap().apply { putString("id", paymentMethodId) })
+      emit(
+        "topPaymentMethod",
+        Arguments.createMap().apply {
+          putString("id", paymentMethodId)
+          putString("returnUrl", returnUrl.orEmpty())
+        },
+      )
     }
     return deferred.await()
   }

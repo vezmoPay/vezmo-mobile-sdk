@@ -14,7 +14,8 @@ Full guide: [Vezmo docs → Mobile → React Native SDK](https://user.vezmo.com/
   development build (not Expo Go).
 - iOS 15.1 or later. Android 7.0 (API 24) or later.
 - Your app added in the Vezmo dashboard under **Developers → Mobile apps**, with its return link (for example
-  `acme://vezmo`). The buyer comes back through it after 3D Secure, a bank app or a pay-later provider.
+  `acme://vezmo`). The buyer comes back through it after 3D Secure, a bank app or a pay-later provider. For Android,
+  add it as an Android app too, with its package name: Cash App and the pay-later methods need it there.
 
 ## Install
 

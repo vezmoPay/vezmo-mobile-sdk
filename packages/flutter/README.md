@@ -15,7 +15,8 @@ The sheet is drawn by Vezmo's native SDKs, so it looks and behaves exactly like 
   extends `FlutterFragmentActivity` (below).
 - **iPhone**: iOS 15.1 or later, Xcode 16 or later, with Swift Package Manager (Flutter's default).
 - Your app added in the Vezmo dashboard under **Developers → Mobile apps**, with its return link (for example
-  `acme://vezmo`).
+  `acme://vezmo`). For Android, add it as an Android app too, with its package name (`applicationId`): Cash App and the
+  pay-later methods need it there.
 
 ## Install
 

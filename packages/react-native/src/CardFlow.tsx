@@ -29,7 +29,7 @@ export interface CardFlowProps {
   onWalletsHeight?: (height: number) => void;
   /** A wallet button was tapped: the payment has started. */
   onWalletTap?: (wallet: string) => void;
-  onPaymentMethod: (id: string) => void;
+  onPaymentMethod: (id: string, engineReturnUrl: string | null) => void;
   onConfirmResult: (status: 'completed' | 'canceled' | 'failed', message: string) => void;
 }
 
@@ -79,7 +79,7 @@ export const CardFlow = forwardRef<CardFlowHandle, CardFlowProps>(function CardF
       }
       onBankChange={(e) => props.onBankChange?.({ available: e.nativeEvent.available, label: e.nativeEvent.label })}
       onWalletTap={(e) => props.onWalletTap?.(e.nativeEvent.wallet)}
-      onPaymentMethod={(e) => props.onPaymentMethod(e.nativeEvent.id)}
+      onPaymentMethod={(e) => props.onPaymentMethod(e.nativeEvent.id, e.nativeEvent.returnUrl || null)}
       onConfirmResult={(e) =>
         props.onConfirmResult(e.nativeEvent.status as 'completed' | 'canceled' | 'failed', e.nativeEvent.message)
       }

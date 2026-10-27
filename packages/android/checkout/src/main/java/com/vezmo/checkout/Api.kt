@@ -111,11 +111,8 @@ internal class VezmoApi(
             .put("paymentMethodId", paymentMethodId)
             .put("integration", INTEGRATION)
         if (!localOffer.isNullOrEmpty()) body.put("localOffer", localOffer)
-        // No returnUrl, as in 0.1.x: a card (3D Secure included) and Google Pay finish in the engine without one. The
-        // app's link would open the app but leave a bank app's or pay-later provider's payment waiting.
-        // TODO(0.2.0, before release): those methods need the payment engine's own return link, which a confirmation
-        // token carried and a payment method doesn't; send it once Vezmo's API accepts it for `android`.
-        // (`returnUrl` stays in the signature for the other platforms' shape.)
+        // The payment engine's own return link, for a method that leaves the app (see engineReturnUrl); none for a card.
+        if (!returnUrl.isNullOrEmpty()) body.put("returnUrl", returnUrl)
         return PayResponse.from(call("POST", "/secure-payments/${enc(token)}/pay", body))
     }
 

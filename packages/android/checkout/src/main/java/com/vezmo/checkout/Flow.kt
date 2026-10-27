@@ -106,6 +106,16 @@ internal fun resultFromStatus(s: SessionStatus): CheckoutResult? =
 internal fun merchantCountry(app: String?, session: String?): String =
     listOf(app, session).firstNotNullOfOrNull { c -> c?.trim()?.uppercase()?.takeIf { Regex("[A-Z]{2}").matches(it) } } ?: "US"
 
+/**
+ * The payment engine's own return link (`stripesdk://payment_return_url/<package>`, what it opens to bring the buyer
+ * back into the open sheet) for a method that leaves the app: a bank app or a pay-later provider (Cash App, Klarna,
+ * Affirm, Afterpay, Amazon Pay). Vezmo's API takes it for a business that registered this app (Developers → Mobile
+ * apps, Android, this package). Null for a card (3D Secure and Google Pay included) and Instant ACH, which come back
+ * without it: they keep working for a business that registered no app.
+ */
+internal fun engineReturnUrl(paymentMethodType: String?, packageName: String): String? =
+    if (paymentMethodType == "card" || paymentMethodType == "link") null else "stripesdk://payment_return_url/$packageName"
+
 /** Paid, or money on its way. */
 internal val CheckoutResult.isPaid get() = this is CheckoutResult.Succeeded || this is CheckoutResult.Processing
 

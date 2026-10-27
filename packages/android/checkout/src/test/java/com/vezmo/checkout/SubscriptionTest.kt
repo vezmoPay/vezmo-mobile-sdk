@@ -86,7 +86,7 @@ class SubscriptionTest {
     private class Setup(scope: TestScope, v: JSONObject = view()) {
         val api = FakeSubscriptionApi(v)
         val cardFlow = CardFlow()
-        val session = CheckoutSession(api, "subtok", "acme://vezmo", UnconfinedTestDispatcher(scope.testScheduler), subscription = true)
+        val session = CheckoutSession(api, "subtok", UnconfinedTestDispatcher(scope.testScheduler), subscription = true)
             .also { it.attachCardFlow(cardFlow) }
 
         /** The buyer types a card in the card form. */
@@ -178,6 +178,26 @@ class SubscriptionTest {
         assertEquals(listOf("subtok:pi_9"), t.api.confirms)
         assertEquals(
             SessionPhase.Done(CheckoutResult.Succeeded("pay_9", "VT9", SubscriptionResult("SUB-1", SubscriptionResult.Status.Active))),
+            t.session.state.value.phase,
+        )
+        t.session.dispose()
+    }
+
+    @Test
+    fun `a decline at our confirm after 3D Secure (the engine completed) - the sheet stays ready, in Vezmo's words`() = runTest {
+        val t = Setup(this, firstPayment())
+        t.session.load()
+        t.chooseCard()
+        t.api.payAnswer = JSONObject(
+            """{"state":"requires_action","subscriptionRef":"SUB-1","clientSecret":"pi_9_secret_b","method":null}""",
+        )
+        t.api.confirmError = VezmoApiError(VezmoError.Code.Declined, "Payment declined by your bank (issuer).", 400)
+        t.session.pay()
+        t.session.onPaymentMethod("pm_1")
+        t.session.onConfirmResult(ConfirmStatus.Completed, "")
+        assertEquals(listOf("subtok:pi_9"), t.api.confirms)
+        assertEquals(
+            SessionPhase.Ready(VezmoError(VezmoError.Code.Declined, "Payment declined by your bank (issuer).")),
             t.session.state.value.phase,
         )
         t.session.dispose()

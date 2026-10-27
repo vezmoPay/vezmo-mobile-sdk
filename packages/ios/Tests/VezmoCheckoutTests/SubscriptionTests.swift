@@ -205,6 +205,21 @@ final class SubscriptionSessionTests: XCTestCase {
     XCTAssertEqual(session.snapshot.phase, .ready(error: VezmoError(code: .declined, message: "The payment was not completed.")))
   }
 
+  func testADeclineAtOurConfirmAfter3DSecureLeavesTheSheetReadyInOurWords() async {
+    await start(firstPayment)
+    chooseCard()
+    api.subscriptionPayAnswer = {
+      SubscriptionPayResponse(state: "requires_action", subscriptionRef: "SUB-1", clientSecret: "pi_9_secret_b")
+    }
+    api.subscriptionConfirmError = VezmoAPIError(.declined, "Payment declined by your bank (issuer).", httpStatus: 400)
+    session.pay()
+    await session.onPaymentMethod("pm_1")
+    // Manual confirmation: the engine completes 3D Secure; our confirm step has the bank's answer.
+    await session.onConfirmResult(.completed, message: "")
+    XCTAssertEqual(api.subscriptionConfirmCalls, [["subtok", "pi_9"]])
+    XCTAssertEqual(session.snapshot.phase, .ready(error: VezmoError(code: .declined, message: "Payment declined by your bank (issuer).")))
+  }
+
   func testAUsedOrUnknownSubscriptionLinkClosesTheSheetAsExpired() async {
     api = FakeAPI(config: makeConfig())
     api.subscriptionError = VezmoAPIError(.expired, "This subscription link is no longer valid.", httpStatus: 404)

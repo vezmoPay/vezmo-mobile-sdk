@@ -36,7 +36,7 @@ class ApiTest {
     fun `pays with the payment method, our integration and SDK header, and unwraps the data`() = runTest {
         val calls = mutableListOf<Recorded>()
         val res = api(200, """{"success":true,"data":{"state":"processing","paymentId":"p","clientSecret":null}}""", calls)
-            .pay("tok/1", "pm_1", "o", "acme://vezmo")
+            .pay("tok/1", "pm_1", "o", "stripesdk://payment_return_url/com.acme.shop")
         assertEquals("processing", res.state)
         assertEquals(null, res.clientSecret)
         val call = calls.single()
@@ -44,11 +44,20 @@ class ApiTest {
         assertEquals("POST", call.method)
         assertTrue(call.headers["Vezmo-SDK"]!!.matches(Regex("""^android/\d+\.\d+\.\d+.*""")))
         val body = JSONObject(call.body!!)
-        // A payment method, never a confirmation token; no returnUrl (as in 0.1.x, see VezmoApi.pay).
-        assertEquals(setOf("paymentMethodId", "integration", "localOffer"), body.keys().asSequence().toSet())
+        // A payment method, never a confirmation token; the engine's return link when the method leaves the app.
+        assertEquals(setOf("paymentMethodId", "integration", "localOffer", "returnUrl"), body.keys().asSequence().toSet())
         assertEquals("pm_1", body.getString("paymentMethodId"))
         assertEquals("android", body.getString("integration"))
         assertEquals("o", body.getString("localOffer"))
+        assertEquals("stripesdk://payment_return_url/com.acme.shop", body.getString("returnUrl"))
+    }
+
+    @Test
+    fun `a card goes without a return link`() = runTest {
+        val calls = mutableListOf<Recorded>()
+        api(200, """{"success":true,"data":{"state":"succeeded","paymentId":"p"}}""", calls).pay("t", "pm_1", null, null)
+        val body = JSONObject(calls.single().body!!)
+        assertEquals(setOf("paymentMethodId", "integration"), body.keys().asSequence().toSet())
     }
 
     @Test

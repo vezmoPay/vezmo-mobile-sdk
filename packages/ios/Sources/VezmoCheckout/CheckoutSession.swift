@@ -511,17 +511,41 @@ final class CheckoutSession: ObservableObject {
       return
     }
     let intentId = intentIdOf(lastPay?.clientSecret)
-    if kind == .subscription {
-      let result = await startedSubscription(intentId)
-      set { $0.phase = .done(result) }
+    do {
+      if kind == .subscription {
+        var confirmed: SubscriptionConfirm?
+        if let intentId {
+          confirmed = try await declineOnly { try await api.subscriptionConfirm(token: token, intentId: intentId) }
+        }
+        let result = startedSubscription(confirmed)
+        set { $0.phase = .done(result) }
+        return
+      }
+      if let intentId {
+        // The webhook records it either way; the status below is the answer.
+        _ = try await declineOnly { try await api.confirm(token: token, paymentIntentId: intentId) }
+      }
+    } catch {
+      // Our server confirmed the card after 3D Secure and the bank said no: its reason in Vezmo's words, and the sheet
+      // stays open for another card.
+      set { $0.phase = .ready(error: (error as? VezmoAPIError)?.vezmoError ?? declinedError) }
       return
-    }
-    if let intentId {
-      // The webhook records it either way; the status below is the answer.
-      try? await api.confirm(token: token, paymentIntentId: intentId)
     }
     let result = await settledResult()
     set { $0.phase = .done(result) }
+  }
+
+  /// Our server's confirm after the buyer's step (3D Secure, a redirect). It confirms a card that waits for it after 3D
+  /// Secure (manual confirmation), so the bank's decline comes back here: rethrown. Anything else (offline, a step
+  /// still running) is nil: the webhook records the payment and the status says how it stands.
+  private func declineOnly<T>(_ call: () async throws -> T) async throws -> T? {
+    do {
+      return try await call()
+    } catch let error as VezmoAPIError where error.code == .declined && error.reason != "requires_action" {
+      throw error
+    } catch {
+      return nil
+    }
   }
 
   /// A payment Vezmo handed to the device (3D Secure, a redirect) that failed or was lost there: Vezmo's verdict.
@@ -548,11 +572,9 @@ final class CheckoutSession: ObservableObject {
     }
   }
 
-  /// A subscription started on the device (after 3D Secure): Vezmo records it and says how it stands.
-  private func startedSubscription(_ intentId: String?) async -> CheckoutResult {
-    if let intentId, let confirmed = try? await api.subscriptionConfirm(token: token, intentId: intentId) {
-      return resultFromSubscriptionConfirm(confirmed)
-    }
+  /// A subscription started on the device (after 3D Secure), as Vezmo's confirm recorded it.
+  private func startedSubscription(_ confirmed: SubscriptionConfirm?) -> CheckoutResult {
+    if let confirmed { return resultFromSubscriptionConfirm(confirmed) }
     // Recorded from the processor's notice instead; the merchant's webhook tells them.
     let ref = snapshot.config?.subscription?.ref ?? ""
     return .processing(paymentId: nil, subscription: SubscriptionResult(ref: ref, status: .incomplete))

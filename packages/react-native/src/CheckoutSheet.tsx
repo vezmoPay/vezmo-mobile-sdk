@@ -319,7 +319,7 @@ export function CheckoutSheet(props: CheckoutSheetProps) {
                         }}
                         onWalletsHeight={setWalletsHeight}
                         onWalletTap={(wallet) => session.walletStarted(wallet)}
-                        onPaymentMethod={(id) => void session.onPaymentMethod(id)}
+                        onPaymentMethod={(id, returnUrl) => void session.onPaymentMethod(id, returnUrl)}
                         onConfirmResult={(status, message) => void session.onConfirmResult(status, message)}
                       />
                       {walletsHeight > 1 && (
@@ -379,7 +379,7 @@ export function CheckoutSheet(props: CheckoutSheetProps) {
                               session.setElementError(null);
                             }}
                             onLoadFailed={(message) => session.setElementError(message || 'load failed')}
-                            onPaymentMethod={(id) => void session.onPaymentMethod(id)}
+                            onPaymentMethod={(id, returnUrl) => void session.onPaymentMethod(id, returnUrl)}
                             onConfirmResult={(status, message) => void session.onConfirmResult(status, message)}
                           />
                         </View>

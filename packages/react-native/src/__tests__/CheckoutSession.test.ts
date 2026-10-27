@@ -66,10 +66,16 @@ describe('CheckoutSession', () => {
     t.session.setOption({ label: '•••• 4242' });
     t.session.pay();
     expect(t.element.confirm).toHaveBeenCalled();
-    await t.session.onPaymentMethod('pm_1');
+    // Android hands the engine's own way back for a method that leaves the app; the API client picks the platform's.
+    await t.session.onPaymentMethod('pm_1', 'stripesdk://payment_return_url/com.acme.shop');
     // The receipt's Visa mark and last four come from the server's reading of the payment.
     expect(t.session.getSnapshot().paidMethod).toEqual(method);
-    expect(t.api.pay).toHaveBeenCalledWith('tok', { paymentMethodId: 'pm_1', localOffer: null, returnUrl: 'acme://vezmo/return' });
+    expect(t.api.pay).toHaveBeenCalledWith('tok', {
+      paymentMethodId: 'pm_1',
+      localOffer: null,
+      returnUrl: 'acme://vezmo/return',
+      engineReturnUrl: 'stripesdk://payment_return_url/com.acme.shop',
+    });
     expect(t.element.resolveConfirmation).toHaveBeenCalledWith('pi_1_secret_a', undefined);
     await t.session.onConfirmResult('completed', '');
     expect(t.session.getSnapshot().phase).toEqual({
@@ -86,6 +92,29 @@ describe('CheckoutSession', () => {
     await t.session.onConfirmResult('completed', '');
     expect(t.api.confirm).toHaveBeenCalledWith('tok', 'pi_9');
     expect(t.session.getSnapshot().phase).toMatchObject({ name: 'done', result: { status: 'succeeded', transactionId: 'VT1' } });
+  });
+
+  it('a decline at our /confirm after 3D Secure (the engine completed) leaves the sheet ready, in our words', async () => {
+    // A card our server confirms (manual confirmation): back from 3D Secure the engine reports completed, and the bank's
+    // answer comes from our confirm step.
+    t.api.pay.mockResolvedValue({ state: 'requires_action', paymentId: 'pay_1', clientSecret: 'pi_9_secret_b' });
+    t.api.status.mockResolvedValue({ state: 'failed', paymentId: 'pay_1', transactionId: null, livemode: false });
+    t.api.confirm.mockRejectedValue(new VezmoApiError('declined', 'Payment declined by your bank (issuer).', 400));
+    t.session.pay();
+    await t.session.onPaymentMethod('pm_1');
+    await t.session.onConfirmResult('completed', '');
+    expect(t.api.confirm).toHaveBeenCalledWith('tok', 'pi_9');
+    expect(t.session.getSnapshot().phase).toEqual({
+      name: 'ready',
+      error: { code: 'declined', message: 'Payment declined by your bank (issuer).' },
+    });
+    // A step still running: the status says how it stands, as before.
+    t.api.status.mockResolvedValue({ state: 'succeeded', paymentId: 'pay_1', transactionId: 'VT1', livemode: false });
+    t.api.confirm.mockRejectedValue(new VezmoApiError('declined', 'Still verifying.', 400, 'requires_action'));
+    t.session.pay();
+    await t.session.onPaymentMethod('pm_2');
+    await t.session.onConfirmResult('completed', '');
+    expect(t.session.getSnapshot().phase).toMatchObject({ name: 'done', result: { status: 'succeeded' } });
   });
 
   it('a decline goes back to the element in our words and leaves the sheet ready to retry', async () => {

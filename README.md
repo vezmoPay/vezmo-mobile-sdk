@@ -42,7 +42,8 @@ phone's secure browser sheet instead ([Checkout for apps](https://user.vezmo.com
 
 Every app also needs a Vezmo business with your app added under **Developers → Mobile apps** in the dashboard. On
 iPhone that is where you register the return link (for example `acme://vezmo`) the buyer comes back through after
-3D Secure, a bank app or a pay-later provider.
+3D Secure, a bank app or a pay-later provider. On Android, add the app with its package name (`applicationId`): Cash
+App and the pay-later methods bring the buyer back to the sheet only for a registered package.
 
 ## What the sheet does
 

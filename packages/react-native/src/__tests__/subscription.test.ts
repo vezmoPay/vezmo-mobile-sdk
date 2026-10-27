@@ -181,6 +181,7 @@ describe('subscriptions in the sheet', () => {
       paymentMethodId: 'pm_1',
       localOffer: null,
       returnUrl: 'acme://vezmo',
+      engineReturnUrl: null,
     });
     expect(t.cardFlow.resolveConfirmation).toHaveBeenCalledWith('seti_1_secret_a', undefined);
     await t.session.onConfirmResult('completed', '');
@@ -216,6 +217,27 @@ describe('subscriptions in the sheet', () => {
     expect(t.session.getSnapshot().phase).toEqual({
       name: 'done',
       result: { status: 'succeeded', paymentId: 'pay_9', transactionId: 'VT9', subscription: { ref: 'SUB-1', status: 'active' } },
+    });
+  });
+
+  it('a decline at our /confirm after 3D Secure (the engine completed) leaves the sheet ready, in our words', async () => {
+    const t = setup(view({ mode: 'payment', amount: 9.99, trialDays: null }));
+    await t.session.load();
+    choose(t.session);
+    t.api.subscriptionPay.mockResolvedValue({
+      state: 'requires_action',
+      subscriptionRef: 'SUB-1',
+      clientSecret: 'pi_9_secret_b',
+      method: null,
+    });
+    t.api.subscriptionConfirm.mockRejectedValue(new VezmoApiError('declined', 'Payment declined by your bank (issuer).', 400));
+    t.session.pay();
+    await t.session.onPaymentMethod('pm_1');
+    await t.session.onConfirmResult('completed', '');
+    expect(t.api.subscriptionConfirm).toHaveBeenCalledWith('subtok', 'pi_9');
+    expect(t.session.getSnapshot().phase).toEqual({
+      name: 'ready',
+      error: { code: 'declined', message: 'Payment declined by your bank (issuer).' },
     });
   });
 

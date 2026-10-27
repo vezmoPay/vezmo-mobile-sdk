@@ -56,7 +56,6 @@ internal class VezmoCheckoutActivity : ComponentActivity() {
             ?: CheckoutSession(
                 VezmoApi(request.configuration.apiBase ?: DEFAULT_API_BASE, sdk = request.configuration.sdk ?: DEFAULT_SDK),
                 request.token,
-                request.configuration.returnUrl,
                 subscription = request.subscription,
             ).also { s ->
                 // Maybe paid meanwhile (the process was gone mid-payment): then the result, not "already paid".

@@ -23,8 +23,11 @@ export interface NativeProps extends ViewProps {
   onPaymentOptionChange?: CodegenTypes.DirectEventHandler<
     Readonly<{ paymentMethodType: string; label: string }>
   >;
-  /** The buyer confirmed: here is the payment method's id (`pm_…`) for our server to price and confirm. */
-  onPaymentMethod?: CodegenTypes.DirectEventHandler<Readonly<{ id: string }>>;
+  /**
+   * The buyer confirmed: here is the payment method's id (`pm_…`) for our server to price and confirm, and (Android) the
+   * payment engine's own return link for a method that leaves the app ('' otherwise).
+   */
+  onPaymentMethod?: CodegenTypes.DirectEventHandler<Readonly<{ id: string; returnUrl: string }>>;
   /** `completed`, `canceled` or `failed` (with `message`). */
   onConfirmResult?: CodegenTypes.DirectEventHandler<Readonly<{ status: string; message: string }>>;
 }
